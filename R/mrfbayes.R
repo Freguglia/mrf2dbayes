@@ -1,0 +1,70 @@
+#' @name mrfbayes
+#' @title Metropolis-Hasting algorithm for Markov Random Fields on lattices
+#'
+#' @param z The observed random field.
+#' @param mrfi a `mrfi` object with the interaction structure
+#' @param family the parameter restriction family.
+#' @param llapprox The likelihood approximation to be used.
+#' @param nsamples Number of MCMC samples.
+#' @param init_theta Initial values of the MCMC algorithm. Set to "zero" to
+#'   automatically create a vector equal to zero with appropriate length.
+#' @param sdprior Sample Deviation of the Normal distributions used as prior.
+#' @param sdkernel Sample Deviation of the Normal distributions of the
+#'   transition kernel.
+#' @param verbose `logical` value indicating wheter the algorithm progress
+#'   should be printed.
+#'
+#' @importFrom mrf2d expand_array smr_stat smr_array
+#' @export
+mrfbayes <- function(z, mrfi, family, llapprox,
+                     nsamples = 1000, init_theta = "zero",
+                     sdprior = 10, sdkernel = 0.05,
+                     verbose = interactive()){
+
+  # Initialize meta-parameters and do some checks
+  T_zobs <- smr_stat(z, mrfi, family)
+  fdim <- length(T_zobs)
+  C <- length(unique(as.vector(z)))
+  if(length(setdiff(0:C, unique(as.vector(z)))) > 1){
+    stop("'z' should be a matrix with values in 0,...,C for some integer C.")
+  }
+  # TODO: add check for llaprox being of a class defined in the package later.
+
+  # Initialize values
+  if(is.character(init_theta)){
+    if(init_theta == "zero"){
+      current_theta <- T_zobs*0
+    }
+  }
+
+  resmat <- matrix(0, nrow = nsamples, ncol = fdim)
+
+  # Run MCMC
+  for(i in 1:nsamples){
+    # Propose
+    proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)
+
+    # Compute acceptance probability
+    logA <- llapprox(z, proposed_theta) +
+      sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+      llapprox(z, current_theta) -
+      sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+    if(log(runif(1)) < logA){
+      current_theta <- proposed_theta
+    }
+
+    # Store results
+    resmat[i,] <- current_theta
+
+    if(verbose){
+      cat("\r", i)
+    }
+  }
+
+  resdf <- as.data.frame(resmat)
+  resdf$t <- 1:nsamples
+
+  resdf <- tidyr::pivot_longer(resdf, cols = -"t")
+
+  return(tibble::as_tibble(resdf))
+}

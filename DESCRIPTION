@@ -14,13 +14,13 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    mrf2d,
     Rcpp,
     dplyr (>= 0.8.1),
     tidyr,
     methods,
-    ggplot2,
     Rdpack,
-    mrf2d
+    tibble
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp, 
            RcppArmadillo
