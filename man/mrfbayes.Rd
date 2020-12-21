@@ -6,8 +6,6 @@
 \usage{
 mrfbayes(
   z,
-  mrfi,
-  family,
   llapprox,
   nsamples = 1000,
   init_theta = "zero",
@@ -18,10 +16,6 @@ mrfbayes(
 }
 \arguments{
 \item{z}{The observed random field.}
-
-\item{mrfi}{a \code{mrfi} object with the interaction structure}
-
-\item{family}{the parameter restriction family.}
 
 \item{llapprox}{The likelihood approximation to be used.}
 

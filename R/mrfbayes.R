@@ -2,8 +2,6 @@
 #' @title Metropolis-Hasting algorithm for Markov Random Fields on lattices
 #'
 #' @param z The observed random field.
-#' @param mrfi a `mrfi` object with the interaction structure
-#' @param family the parameter restriction family.
 #' @param llapprox The likelihood approximation to be used.
 #' @param nsamples Number of MCMC samples.
 #' @param init_theta Initial values of the MCMC algorithm. Set to "zero" to
@@ -16,13 +14,20 @@
 #'
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @export
-mrfbayes <- function(z, mrfi, family, llapprox,
+mrfbayes <- function(z, llapprox,
                      nsamples = 1000, init_theta = "zero",
                      sdprior = 10, sdkernel = 0.05,
                      verbose = interactive()){
 
   # Initialize meta-parameters and do some checks
+  family <- llapprox@family
+  mrfi <- llapprox@mrfi
   T_zobs <- smr_stat(z, mrfi, family)
+  if(llapprox@pass_entire){
+    z_arg <- z
+  } else {
+    z_arg <- T_zobs
+  }
   fdim <- length(T_zobs)
   C <- length(unique(as.vector(z)))
   if(length(setdiff(0:C, unique(as.vector(z)))) > 1){
@@ -45,9 +50,9 @@ mrfbayes <- function(z, mrfi, family, llapprox,
     proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)
 
     # Compute acceptance probability
-    logA <- llapprox(z, proposed_theta) +
+    logA <- llapprox@lafn(z_arg, proposed_theta) +
       sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-      llapprox(z, current_theta) -
+      llapprox@lafn(z_arg, current_theta) -
       sum(dnorm(current_theta, sd = sdprior, log = TRUE))
     if(log(runif(1)) < logA){
       current_theta <- proposed_theta
