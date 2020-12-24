@@ -20,7 +20,8 @@ Imports:
     tidyr,
     methods,
     Rdpack,
-    tibble
+    tibble,
+    Brobdingnag
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp, 
            RcppArmadillo

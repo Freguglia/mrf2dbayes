@@ -1,6 +1,7 @@
 #' @name mrfbayes
 #' @title Metropolis-Hasting algorithm for Markov Random Fields on lattices
 #'
+#' @inheritParams llapprox
 #' @param z The observed random field.
 #' @param llapprox The likelihood approximation to be used.
 #' @param nsamples Number of MCMC samples.
@@ -9,8 +10,6 @@
 #' @param sdprior Sample Deviation of the Normal distributions used as prior.
 #' @param sdkernel Sample Deviation of the Normal distributions of the
 #'   transition kernel.
-#' @param verbose `logical` value indicating wheter the algorithm progress
-#'   should be printed.
 #'
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @export

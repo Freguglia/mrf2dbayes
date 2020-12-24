@@ -28,8 +28,9 @@ setClass("llapprox",
 setMethod("show", "llapprox",
           function(object){
             method_name <- switch(object@method,
-                                  pseudo = "Pseudolikelihood")
-            cat(glue::glue("Log-Likelihood approximation via {method_name}\n"))
+                                  pseudo = "Pseudolikelihood",
+                                  gt = "Geyer-Thompson method")
+            cat(glue::glue("Log-Likelihood funcion approximation via {method_name}\n"))
           })
 
 #' @rdname llapprox-class
@@ -43,14 +44,29 @@ setMethod("show", "llapprox",
 #' @param method Which type of approximation should be created. Options are:
 #'   * `"pseudo"` for Pseudolikelihood approximation (which will result in
 #'   Pseudoposteriors).
-#' @param extra_args A list of extra options passed depending on the method
-#'   used.
+#'   * `"gt"` for Geyer-Thompson.
+#'   * `"wanglandau"` for the Wang-Landau algorithm.
+#' @param ... Extra options passed depending on the method used.
+#'   * If the selected method is `"gt"`:
+#'     * `reference`: A reference parameter value (theta), either as an array
+#'     or a vector of appropriate length.
+#'     * `nsamples`: The number of samples to be used in the approximation.
+#'     * `ncycles`: The number of Gibbs Sampler cycles between each sample.
+#'   * If the selected methid is `"wanglandau"`:
+#'     * `reference`:
+#' @param verbose `logical` value indicating wheter the algorithm progress
+#'   should be printed.
+#'
+#'
 #'
 #' @return a `llapprox` object.
 #'
+#' @importFrom Brobdingnag as.brob
+#'
 #' @author Victor Freguglia
 #' @export
-llapprox <- function(refz, mrfi, family, method = "pseudo", extra_args = NULL){
+llapprox <- function(refz, mrfi, family, method = "pseudo",
+                     verbose = interactive(), ...){
   la <- methods::new("llapprox")
   C <- length(unique(as.vector(refz))) - 1
 
@@ -58,12 +74,56 @@ llapprox <- function(refz, mrfi, family, method = "pseudo", extra_args = NULL){
   la@mrfi <- mrfi
   la@C <- C
 
+  extra_args <- list(...)
+
   if(method == "pseudo"){
     la@method <- "pseudo"
     la@pass_entire <- TRUE
     la@lafn <- function(z, theta_vec){
       theta_arr <- mrf2d::expand_array(theta_vec, family, mrfi, C)
       mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
+    }
+  } else if(method == "gt"){
+    la@method <- "gt"
+    la@pass_entire <- FALSE
+
+    if(is.null(extra_args$nsamples)){
+      stop("The argument 'nsamples' must be specified for method 'gt'.")
+    }
+    if(is.null(extra_args$ncycles)){
+      stop("The argument 'ncycles' must be specified for method 'gt'.")
+    }
+
+    # Get which theta to sample from
+    if(is.null(extra_args$reference)){
+      warning("'reference' is not specified in 'extra_args'. Using Maximum Pseudolikelihood estimator of 'refz' as reference value.")
+      theta_ref_arr <- mrf2d::fit_pl(refz, mrfi, family)$theta
+    } else {
+      if(!is.array(extra_args$reference)){
+        theta_ref_arr <- mrf2d::expand_array(extra_args$reference, family, mrfi, C)
+      } else {
+        theta_ref_arr <- extra_args$reference
+      }
+    }
+
+    # Get sample size and number of cycles
+    zmc <- mrf2d::rmrf2d(dim(refz), mrfi, theta_ref_arr, cycles = 60)
+    Tzmc <- mrf2d::smr_stat(zmc, mrfi, family)
+    Tzmat <- matrix(0, nrow = extra_args$nsamples, ncol = length(Tzmc))
+    if(verbose) cat("Sampling ergodic chain for Monte-Carlo approximations: \n")
+    for(t in 1:extra_args$nsamples){
+      zmc <- mrf2d::rmrf2d(zmc, mrfi, theta_ref_arr, extra_args$ncycles)
+      Tzmat[t,] <- mrf2d::smr_stat(zmc, mrfi, family)
+      if(verbose) cat("\r", t)
+    }
+    if(verbose) cat("\n")
+
+    # Define log-likelihood function approximation
+    theta_ref <- mrf2d::smr_array(theta_ref_arr, family)
+    la@lafn <- function(z, theta_vec){
+      Hs <- as.brob(as.vector(Tzmat %*% (theta_vec - theta_ref)))
+      logzeta <- log(Brobdingnag::sum(exp(Hs))/length(Hs))
+      return(as.vector(t(z) %*% theta_vec - logzeta))
     }
   } else {
     stop(glue::glue("'{method}' is not a valid method."))
