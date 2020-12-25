@@ -6,7 +6,9 @@
 #' @param llapprox The likelihood approximation to be used.
 #' @param nsamples Number of MCMC samples.
 #' @param init_theta Initial values of the MCMC algorithm. Set to "zero" to
-#'   automatically create a vector equal to zero with appropriate length.
+#'   automatically create a vector equal to zero with appropriate length or
+#'   "pl" to use the Maximum Pseudolikelihood estimator of `z` as the initial
+#'   value.
 #' @param sdprior Sample Deviation of the Normal distributions used as prior.
 #' @param sdkernel Sample Deviation of the Normal distributions of the
 #'   transition kernel.
@@ -38,7 +40,14 @@ mrfbayes <- function(z, llapprox,
   if(is.character(init_theta)){
     if(init_theta == "zero"){
       current_theta <- T_zobs*0
+    } else if(init_theta == "pl") {
+      current_theta <- mrf2d::fit_pl(z, mrfi, family)$theta
+      current_theta <- mrf2d::smr_array(current_theta, family)
     }
+  } else if(is.array(init_theta)){
+
+  } else {
+    current_theta <- init_theta
   }
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)

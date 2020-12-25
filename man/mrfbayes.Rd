@@ -22,7 +22,9 @@ mrfbayes(
 \item{nsamples}{Number of MCMC samples.}
 
 \item{init_theta}{Initial values of the MCMC algorithm. Set to "zero" to
-automatically create a vector equal to zero with appropriate length.}
+automatically create a vector equal to zero with appropriate length or
+"pl" to use the Maximum Pseudolikelihood estimator of \code{z} as the initial
+value.}
 
 \item{sdprior}{Sample Deviation of the Normal distributions used as prior.}
 

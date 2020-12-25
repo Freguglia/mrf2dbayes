@@ -109,13 +109,10 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
     # Get sample size and number of cycles
     zmc <- mrf2d::rmrf2d(dim(refz), mrfi, theta_ref_arr, cycles = 60)
     Tzmc <- mrf2d::smr_stat(zmc, mrfi, family)
-    Tzmat <- matrix(0, nrow = extra_args$nsamples, ncol = length(Tzmc))
     if(verbose) cat("Sampling ergodic chain for Monte-Carlo approximations: \n")
-    for(t in 1:extra_args$nsamples){
-      zmc <- mrf2d::rmrf2d(zmc, mrfi, theta_ref_arr, extra_args$ncycles)
-      Tzmat[t,] <- mrf2d::smr_stat(zmc, mrfi, family)
-      if(verbose) cat("\r", t)
-    }
+    Tzmat <- mrf2d::rmrf2d_mc(zmc, mrfi, theta_ref_arr, family,
+                              nmc = extra_args$nsamples,
+                              burnin = 60, cycles = extra_args$ncycles)
     if(verbose) cat("\n")
 
     # Define log-likelihood function approximation
@@ -123,8 +120,9 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
     la@lafn <- function(z, theta_vec){
       Hs <- as.brob(as.vector(Tzmat %*% (theta_vec - theta_ref)))
       logzeta <- log(Brobdingnag::sum(exp(Hs))/length(Hs))
-      return(as.vector(t(z) %*% theta_vec - logzeta))
+      return(as.vector(t(z) %*% theta_vec) - logzeta)
     }
+    la@internal_data <- list(mcsamples = Tzmat)
   } else {
     stop(glue::glue("'{method}' is not a valid method."))
   }
