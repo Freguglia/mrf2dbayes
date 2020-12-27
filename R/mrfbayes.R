@@ -13,6 +13,8 @@
 #' @param sdkernel Sample Deviation of the Normal distributions of the
 #'   transition kernel.
 #'
+#' @return An object of class `mrfbayes_out`
+#'
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @export
 mrfbayes <- function(z, llapprox,
@@ -73,11 +75,16 @@ mrfbayes <- function(z, llapprox,
       cat("\r", i)
     }
   }
+  if(verbose){
+    cat("\n")
+  }
 
   resdf <- as.data.frame(resmat)
   resdf$t <- 1:nsamples
 
   resdf <- tidyr::pivot_longer(resdf, cols = -"t")
 
-  return(tibble::as_tibble(resdf))
+  out <- list(df = tibble::as_tibble(resdf))
+  class(out) <- "mrfbayes_out"
+  return(out)
 }

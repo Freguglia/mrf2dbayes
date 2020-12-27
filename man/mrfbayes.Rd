@@ -34,6 +34,9 @@ transition kernel.}
 \item{verbose}{\code{logical} value indicating wheter the algorithm progress
 should be printed.}
 }
+\value{
+An object of class \code{mrfbayes_out}
+}
 \description{
 Metropolis-Hasting algorithm for Markov Random Fields on lattices
 }

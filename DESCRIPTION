@@ -21,7 +21,10 @@ Imports:
     methods,
     Rdpack,
     tibble,
-    Brobdingnag
+    Brobdingnag,
+    ggplot2,
+    glue,
+    rlang
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp, 
            RcppArmadillo
@@ -32,8 +35,7 @@ Suggests:
     testthat (>= 2.1.0),
     covr,
     knitr,
-    rmarkdown,
-    glue
+    rmarkdown
 VignetteBuilder: knitr
 URL: https://github.com/Freguglia/mrf2dbayes
 BugReports: https://github.com/Freguglia/mrf2dbayes/issues
