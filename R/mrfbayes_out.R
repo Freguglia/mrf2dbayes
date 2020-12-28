@@ -11,7 +11,7 @@
 #' @rdname mrfbayes_out
 #' @export
 print.mrfbayes_out <- function(x, ...){
-  cat(glue("mrfbayes output with {max(x$df$t)} observations from the posterior distribution.\n"))
+  cat(glue("mrfbayes output with {max(x$df$t)} observations from the posterior distribution."), "\n")
 }
 
 #' @rdname mrfbayes_out
@@ -21,12 +21,8 @@ print.mrfbayes_out <- function(x, ...){
 #' @export
 summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
   df <- object$df
-  extra_args <- list(...)
-  if(!is.null(extra_args$burnin)){
-    burnin <- extra_args$burnin
-    if(burnin < 1) burnin <- burnin*max(df$t)
-    df <- df[df$t>burnin,]
-  }
+  if(burnin < 1) burnin <- burnin*max(df$t)
+  df <- df[df$t>burnin,]
   stts <- summarize(group_by(df, .data$name),
                     q025 = quantile(.data$value, probs = 0.025),
                     mean = mean(.data$value),
@@ -36,10 +32,17 @@ summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
 }
 
 #' @rdname mrfbayes_out
-#' @importFrom ggplot2 ggplot aes geom_line
+#' @importFrom ggplot2 ggplot aes geom_line geom_hline
 #' @export
-plot.mrfbayes_out <- function(x, ...){
+plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
+  stts <- summary(x, burnin = burnin)
   p <- ggplot(x$df, aes(x = .data$t, y = .data$value, color = .data$name)) +
-    geom_line()
+    geom_line() +
+    geom_hline(data = stts, aes(yintercept = q025, color = name), 
+        linetype = "dashed", alpha = 0.5) +
+    geom_hline(data = stts, aes(yintercept = q975, color = name), 
+        linetype = "dashed", alpha = 0.5) +
+    theme_bw()
+
   return(p)
 }

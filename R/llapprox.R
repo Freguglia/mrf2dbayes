@@ -17,21 +17,21 @@
 #' @slot internal_data Internal data to be used by the approximating function.
 #' @exportClass llapprox
 setClass("llapprox",
-         representation(lafn = "function",
-                        family = "character",
-                        mrfi = "mrfi",
-                        C = "numeric",
-                        pass_entire = "logical",
-                        method = "character",
-                        internal_data = "list"))
+    representation(lafn = "function",
+        family = "character",
+        mrfi = "mrfi",
+        C = "numeric",
+        pass_entire = "logical",
+        method = "character",
+        internal_data = "list"))
 
 setMethod("show", "llapprox",
-          function(object){
-            method_name <- switch(object@method,
-                                  pseudo = "Pseudolikelihood",
-                                  gt = "Geyer-Thompson method")
-            cat(glue::glue("Log-Likelihood funcion approximation via {method_name}\n"))
-          })
+    function(object){
+        method_name <- switch(object@method,
+            pseudo = "Pseudolikelihood",
+            gt = "Geyer-Thompson method")
+        cat(glue::glue("Log-Likelihood funcion approximation via {method_name}"), "\n")
+    })
 
 #' @rdname llapprox-class
 #'
@@ -66,66 +66,68 @@ setMethod("show", "llapprox",
 #' @author Victor Freguglia
 #' @export
 llapprox <- function(refz, mrfi, family, method = "pseudo",
-                     verbose = interactive(), ...){
-  la <- methods::new("llapprox")
-  C <- length(unique(as.vector(refz))) - 1
+    verbose = interactive(), ...){
+    la <- methods::new("llapprox")
+    C <- length(unique(as.vector(refz))) - 1
 
-  la@family <- family
-  la@mrfi <- mrfi
-  la@C <- C
+    la@family <- family
+    la@mrfi <- mrfi
+    la@C <- C
 
-  extra_args <- list(...)
+    extra_args <- list(...)
 
-  if(method == "pseudo"){
-    la@method <- "pseudo"
-    la@pass_entire <- TRUE
-    la@lafn <- function(z, theta_vec){
-      theta_arr <- mrf2d::expand_array(theta_vec, family, mrfi, C)
-      mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
-    }
-  } else if(method == "gt"){
-    la@method <- "gt"
-    la@pass_entire <- FALSE
+    if(method == "pseudo"){
+        la@method <- "pseudo"
+        la@pass_entire <- TRUE
+        la@lafn <- function(z, theta_vec){
+            theta_arr <- mrf2d::expand_array(theta_vec, family, mrfi, C)
+            mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
+        }
+    } else if(method == "gt"){
+        la@method <- "gt"
+        la@pass_entire <- FALSE
 
-    if(is.null(extra_args$nsamples)){
-      stop("The argument 'nsamples' must be specified for method 'gt'.")
-    }
-    if(is.null(extra_args$ncycles)){
-      stop("The argument 'ncycles' must be specified for method 'gt'.")
-    }
+        if(is.null(extra_args$nsamples)){
+            stop("The argument 'nsamples' must be specified for method 'gt'.")
+        }
+        if(is.null(extra_args$ncycles)){
+            stop("The argument 'ncycles' must be specified for method 'gt'.")
+        }
 
-    # Get which theta to sample from
-    if(is.null(extra_args$reference)){
-      warning("'reference' is not specified in 'extra_args'. Using Maximum Pseudolikelihood estimator of 'refz' as reference value.")
-      theta_ref_arr <- mrf2d::fit_pl(refz, mrfi, family)$theta
+        # Get which theta to sample from
+        if(is.null(extra_args$reference)){
+            warning("'reference' is not specified in 'extra_args'. Using Maximum Pseudolikelihood estimator of 'refz' as reference value.")
+            theta_ref_arr <- mrf2d::fit_pl(refz, mrfi, family)$theta
+        } else {
+            if(!is.array(extra_args$reference)){
+                theta_ref_arr <- mrf2d::expand_array(extra_args$reference, family, mrfi, C)
+            } else {
+                theta_ref_arr <- extra_args$reference
+            }
+        }
+
+        # Get sample size and number of cycles
+        zmc <- mrf2d::rmrf2d(dim(refz), mrfi, theta_ref_arr, cycles = 60)
+        Tzmc <- mrf2d::smr_stat(zmc, mrfi, family)
+        if(verbose) cat("Sampling ergodic chain for Monte-Carlo approximations: \n")
+        Tzmat <- mrf2d::rmrf2d_mc(zmc, mrfi, theta_ref_arr, family,
+            nmc = extra_args$nsamples,
+            burnin = 60, cycles = extra_args$ncycles)
+        if(verbose) cat("\n")
+
+        # Define log-likelihood function approximation
+        theta_ref <- mrf2d::smr_array(theta_ref_arr, family)
+        la@lafn <- function(z, theta_vec){
+            Hs <- as.brob(as.vector(Tzmat %*% (theta_vec - theta_ref)))
+            logzeta <- log(Brobdingnag::sum(exp(Hs))/length(Hs))
+            return(as.vector(t(z) %*% theta_vec) - logzeta)
+        }
+        la@internal_data <- list(mcsamples = Tzmat)
+    } else if(method == "wl") {
+        # TODO: Implement Wang-Landau approximation
     } else {
-      if(!is.array(extra_args$reference)){
-        theta_ref_arr <- mrf2d::expand_array(extra_args$reference, family, mrfi, C)
-      } else {
-        theta_ref_arr <- extra_args$reference
-      }
+        stop(glue::glue("'{method}' is not a valid method."))
     }
 
-    # Get sample size and number of cycles
-    zmc <- mrf2d::rmrf2d(dim(refz), mrfi, theta_ref_arr, cycles = 60)
-    Tzmc <- mrf2d::smr_stat(zmc, mrfi, family)
-    if(verbose) cat("Sampling ergodic chain for Monte-Carlo approximations: \n")
-    Tzmat <- mrf2d::rmrf2d_mc(zmc, mrfi, theta_ref_arr, family,
-                              nmc = extra_args$nsamples,
-                              burnin = 60, cycles = extra_args$ncycles)
-    if(verbose) cat("\n")
-
-    # Define log-likelihood function approximation
-    theta_ref <- mrf2d::smr_array(theta_ref_arr, family)
-    la@lafn <- function(z, theta_vec){
-      Hs <- as.brob(as.vector(Tzmat %*% (theta_vec - theta_ref)))
-      logzeta <- log(Brobdingnag::sum(exp(Hs))/length(Hs))
-      return(as.vector(t(z) %*% theta_vec) - logzeta)
-    }
-    la@internal_data <- list(mcsamples = Tzmat)
-  } else {
-    stop(glue::glue("'{method}' is not a valid method."))
-  }
-
-  return(la)
+    return(la)
 }
