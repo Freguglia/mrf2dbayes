@@ -31,6 +31,7 @@ setMethod("show", "llapprox",
             pseudo = "Pseudolikelihood",
             gt = "Geyer-Thompson method")
         cat(glue::glue("Log-Likelihood funcion approximation via {method_name}"), "\n")
+        cat(glue::glue("Interaction structure: "), mrf2d::mrfi_to_string(object@mrfi), "\n")
     })
 
 #' @rdname llapprox-class
