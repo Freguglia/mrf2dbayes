@@ -23,7 +23,7 @@ summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
   df <- object$df
   if(burnin < 1) burnin <- burnin*max(df$t)
   df <- df[df$t>burnin,]
-  stts <- summarize(group_by(df, .data$name),
+  stts <- summarize(group_by(df, .data$position, .data$interaction),
                     q025 = quantile(.data$value, probs = 0.025),
                     mean = mean(.data$value),
                     q975 = quantile(.data$value, probs = 0.975),
@@ -32,17 +32,19 @@ summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
 }
 
 #' @rdname mrfbayes_out
-#' @importFrom ggplot2 ggplot aes geom_line geom_hline
+#' @importFrom ggplot2 ggplot aes geom_line geom_rect theme_bw facet_wrap
 #' @export
 plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
   stts <- summary(x, burnin = burnin)
-  p <- ggplot(x$df, aes(x = .data$t, y = .data$value, color = .data$name)) +
-    geom_line() +
-    geom_hline(data = stts, aes(yintercept = q025, color = name), 
-        linetype = "dashed", alpha = 0.5) +
-    geom_hline(data = stts, aes(yintercept = q975, color = name), 
-        linetype = "dashed", alpha = 0.5) +
-    theme_bw()
+  tmax <- max(x$df$t)
+  p <- ggplot(x$df) +
+    geom_line(aes(x = .data$t, y = .data$value, color = .data$position)) +
+    geom_rect(data = stts, 
+                aes(xmin = 0, xmax = tmax,
+                    ymin = q025, ymax = q975,
+                    fill = .data$position), alpha = 0.1) +
+    theme_bw() +
+    facet_wrap(~.data$interaction)
 
   return(p)
 }

@@ -32,11 +32,13 @@ mrfbayes <- function(z, llapprox,
     z_arg <- T_zobs
   }
   fdim <- length(T_zobs)
-  C <- length(unique(as.vector(z)))
+  C <- length(unique(as.vector(z))) - 1
   if(length(setdiff(0:C, unique(as.vector(z)))) > 1){
     stop("'z' should be a matrix with values in 0,...,C for some integer C.")
   }
-  # TODO: add check for llaprox being of a class defined in the package later.
+  if(!class(llapprox) == "llapprox"){
+    stop("'llapprox' must be an object created with the llapprox() function.")
+  }
 
   # Initialize values
   if(is.character(init_theta)){
@@ -83,8 +85,10 @@ mrfbayes <- function(z, llapprox,
   resdf$t <- 1:nsamples
 
   resdf <- tidyr::pivot_longer(resdf, cols = -"t")
+  resdf <- cbind(resdf, mrf2d::vec_description(mrfi, family, C))
+  resdf <- resdf[,c("t", "position", "interaction", "value")]
 
-  out <- list(df = tibble::as_tibble(resdf))
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox)
   class(out) <- "mrfbayes_out"
   return(out)
 }
