@@ -1,6 +1,6 @@
 Package: mrf2dbayes
 Type: Package
-Title: Bayesian analysis of Markov Random Fields on 2d lattices
+Title: Bayesian Analysis of Markov Random Fields on 2d Lattices
 Version: 0.1.0
 Authors@R: 
     person("Victor", "Freguglia", email = "victorfreguglia@gmail.com",
