@@ -41,7 +41,7 @@ plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
     geom_line(aes(x = .data$t, y = .data$value, color = .data$position)) +
     geom_rect(data = stts, 
                 aes(xmin = 0, xmax = tmax,
-                    ymin = q025, ymax = q975,
+                    ymin = .data$q025, ymax = .data$q975,
                     fill = .data$position), alpha = 0.1) +
     theme_bw() +
     facet_wrap(~.data$interaction)

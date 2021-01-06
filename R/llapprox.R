@@ -113,9 +113,7 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         if(verbose) cat("Sampling ergodic chain for Monte-Carlo approximations: \n")
         Tzmat <- mrf2d::rmrf2d_mc(zmc, mrfi, theta_ref_arr, family,
             nmc = extra_args$nsamples,
-            burnin = 60, cycles = extra_args$ncycles)
-        if(verbose) cat("\n")
-
+            burnin = 60, cycles = extra_args$ncycles, verbose = verbose)
         # Define log-likelihood function approximation
         theta_ref <- mrf2d::smr_array(theta_ref_arr, family)
         la@lafn <- function(z, theta_vec){
