@@ -3,6 +3,7 @@
 S3method(plot,mrfbayes_out)
 S3method(print,mrfbayes_out)
 S3method(summary,mrfbayes_out)
+export(hmrfbayes)
 export(llapprox)
 export(mrfbayes)
 export(mrfi)
