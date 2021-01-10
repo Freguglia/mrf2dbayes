@@ -1,12 +1,26 @@
+#' @param An observed continuous-valued `numeric matrix` of values.
+#'
+#' @return A `list` with ...
 #' @export
-hmrfbayes <- function(y, llapprox, nsamples = 1000, z0 = NULL, sdpriormu = 10, alpha1 = 0.001, alpha2 = 0.001){
+hmrfbayes <- function(y, llapprox, nsamples = 1000, 
+                      z0 = NULL, mu0 = NULL, sigma0 = NULL,
+                      sdpriormu = 10,
+                      alpha1 = 0.001, alpha2 = 0.001,
+                      verbose = interactive()){
   C <- llapprox@C
   mrfi <- llapprox@mrfi
 
-  # Check and set initial field config
-  if(is.null(z0)){
-    z0 <- matrix(sample(0:2, size = prod(dim(y)), replace = TRUE),
-                 nrow = nrow(y), ncol = ncol(y))
+  # Check and set initial field config if not defined
+  if(is.null(z0) | is.null(mu0) | is.null(sigma0)){
+    if(verbose) cat("Computing initial values via EM algorithm", "\n")
+    EM <- fit_ghm(Y = y, 
+                  mrfi = mrfi(1) - c(1,0),
+                  theta = array(0, dim = c(C+1, C+1, 1)),
+                  verbose = FALSE)
+    if(is.null(z0)) z0 <- EM$Z_pred
+    if(is.null(mu0)) mu0 <- EM$par$mu 
+    if(is.null(sigma0)) sigma0 <- EM$par$sigma^2
+    if(verbose) cat("Done!", "\n")
   }
   
   # Initialize structures to store the results
@@ -22,6 +36,7 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000, z0 = NULL, sdpriormu = 10, a
   sigma2_current <- c(1, 1, 1)
 
   # Generate Markov Chain
+  if(verbose) cat("Running Markov Chain iterations...", "\n")
   for(t in seq_len(nsamples)){
       # Update mus
       stts <- tapply(as.vector(y), INDEX = as.vector(z_chain), 
@@ -44,15 +59,31 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000, z0 = NULL, sdpriormu = 10, a
 
       # Update latent field
       w2 <- lapply(seq_len(C+1), FUN = function(x){
-          dnorm(y, mean = mu_current[x], sd = sqrt(sigma2_current[x]), log = TRUE)
+          dnorm(y, 
+                mean = mu_current[x],
+                sd = sqrt(sigma2_current[x]),
+                log = TRUE)
       })
       w <- array(do.call(c, w2), dim = c(dim(y), length(mu_current)))
       z_chain <- inner_gibbs_conditional(z_chain,
           cond_weights = w, R = mrfi@Rmat, theta = theta, ncycles = 1)
       # TODO: add some counter for the latenf field in each pixel
-      cat("\r", t)
+      if(verbose) cat("\r", t)
   }
+  if(verbose) cat("\n", "Done!", "\n")
 
-  return(list(mu_chain, sigma2_chain))
+  dfmus <- as.data.frame(mu_chain)
+  colnames(dfmus) <- 0:C
+  dfmus <- cbind(t = 1:nsamples, dfmus, par = "mu")
+  
+  dfsigma <- as.data.frame(sigma2_chain)
+  colnames(dfsigma) <- 0:C
+  dfsigma <- cbind(t = 1:nsamples, dfsigma, par = "sigma2")
 
+  dfpars <- rbind(dfmus, dfsigma)
+  
+  out <- list(dfpars = dfpars, ll = llapprox)
+
+  class(out) <- "hmrfbayes_out"
+  return(out)
 }
