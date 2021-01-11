@@ -15,16 +15,16 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
   # Check and set initial field config if not defined
   if(is.null(z0) | is.null(mu0) | is.null(sigma0) | is.null(theta0)){
     if(verbose) cat("Computing initial values via EM algorithm", "\n")
-    EM <- fit_ghm(Y = y, 
-                  mrfi = mrfi(1) - c(1,0),
-                  theta = array(0, dim = c(C+1, C+1, 1)),
-                  equal_vars = TRUE,
-                  verbose = FALSE)
+    EM <- mrf2d::fit_ghm(Y = y, 
+                         mrfi = mrfi(1) - c(1,0),
+                         theta = array(0, dim = c(C+1, C+1, 1)),
+                         equal_vars = TRUE,
+                         verbose = FALSE)
     if(is.null(z0)) z0 <- EM$Z_pred
     if(is.null(mu0)) mu0 <- EM$par$mu 
     if(is.null(sigma0)) sigma0 <- EM$par$sigma^2
     if(is.null(theta0)) 
-      theta0 <- mrf2d::smr_array(fit_pl(EM$Z_pred, mrfi, family)$theta,
+      theta0 <- mrf2d::smr_array(mrf2d::fit_pl(EM$Z_pred, mrfi, family)$theta,
                                  family)
     if(verbose) cat("Done!", "\n")
   }
@@ -81,7 +81,7 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
       z_counts <- z_counts + indicator_array(z_current, C)
       # Update theta with the newly sampled field
       theta_prop <- theta_current + rnorm(dimtheta, sd = sdkerneltheta)
-      if(!a@pass_entire) {
+      if(!llapprox@pass_entire) {
         zpass <- mrf2d::smr_stat(z_current, mrfi, family)
       } else {
         zpass <- z_current
@@ -109,10 +109,13 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
   dfpars <- rbind(dfmus, dfsigma)
   
   # Format data.frame with theta
-  dftheta <- cbind(t = 1:nsamples, as.data.frame(theta_chain))
-  dftheta <- tidyr::pivot_longer(dftheta, cols = -"t")
-  dftheta <- cbind(dftheta, mrf2d::vec_description(mrfi, family, C))
-  
+  dftheta <- cbind(t = 1:nsamples, as.data.frame(theta_chain), 
+                   mrf2d::vec_description(mrfi, family, C))
+  if(family != "onepar"){
+    dftheta <- tidyr::pivot_longer(dftheta, cols = -"t")
+  } else {
+    colnames(dftheta)[2] <- "value"
+  }
 
   out <- list(dfpars = tibble::as_tibble(dfpars),
               dftheta = tibble::as_tibble(dftheta),

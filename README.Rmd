@@ -11,6 +11,7 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+set.seed(1)
 ```
 
 # mrf2dbayes
@@ -38,4 +39,71 @@ The development version from [GitHub](https://github.com/) can be installed with
 # install.packages("devtools")
 devtools::install_github("Freguglia/mrf2dbayes")
 ```
-## Example
+
+## Functionalities
+
+### Likelihood approximations
+
+Because the likelihood function for Markov Random Fields is unavailable due to an intractable normalizing constant, `mrf2dbayes` uses an approximate-posterior distribution approach, which substitutes the likelihood function for an approximation in the acceptance ratio of the Metropolis-Hastings algorithm steps.
+
+log-Likelihood approximations are represented by `llapprox` object. These can be created with the homonym function `llapprox()` and passing a reference field, an interaction structure (`mrfi` object from `mrf2d`), an interaction family (also introduced in `mrf2d`), a method and its related additional arguments.
+
+Approximation methods currently implemented are:
+
+  * `"pseudo"`: Pseudolikelihood approximation.
+  * `"gt"`: Monte-Carlo Likelihood approximation from Geyer \& Thompson (1992).
+  * TODO: `"wl"`: Wang-Landau algorithm.
+  * TODO: `"cpseudo"`: Corrected Pseudolikelihood approach from ...
+
+```{r}
+library(mrf2dbayes)
+# Example MRF from mrf2d
+z <- mrf2d::Z_potts
+
+lla <- llapprox(z, mrfi(1), "oneeach", method = "pseudo")
+```
+
+### MRF parameters posterior sampling
+
+`mrfbayes()` runs a Metropolis-Hastings algorithm to sample from the posterior distribution of the MRF parameters considering centered Gaussian priors and Gaussian transition kernels. It takes an observed (discrete) random field, `llapprox` object and the size of the chain (`nsamples`) as arguments, as well as other arguments to control parameters such as the prior distribution variance and the transition kernel variance.
+
+```{r, cache = TRUE}
+metrop <- mrfbayes(z, lla, nsamples = 10000)
+```
+
+A `mrfbayes_out` object is returned. `plot()` and `summary()` methods are available.
+
+```{r, out.width = "70%", fig.align = 'center'}
+plot(metrop)
+summary(metrop)
+```
+
+### Hidden MRF Bayesian analysis
+
+Considering a Gaussian mixture driven by a Hidden MRF, a Metropolis-Within-Gibbs approach is used to sample the hidden (latent) field, the parameters of the hidden MRF and the parameters of the emission distribution simultaneously. 
+
+A Gaussian prior is used for the means of the emission distribution and an Inverse-Gamma for the variances.
+
+```{r, cache = TRUE}
+bold5000 <- mrf2d::bold5000
+# Dummy discrete field as reference
+dummy <- matrix(sample(0:4, 
+                       prod(dim(bold5000)), replace = TRUE),
+                nrow = nrow(bold5000), ncol = ncol(bold5000))
+
+lla_bold <- llapprox(dummy, mrfi(1), "onepar", method = "pseudo")
+```
+
+```{r, cache = TRUE}
+hmrf_metrop <- hmrfbayes(bold5000, lla_bold, nsamples = 20000)
+```
+
+```{r}
+mrf2d::cplot(bold5000)
+```
+
+```{r}
+plot(hmrf_metrop, "pars")
+plot(hmrf_metrop, "theta")
+plot(hmrf_metrop, "zprobs")
+```

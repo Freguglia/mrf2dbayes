@@ -1,6 +1,6 @@
 #' @rdname hmrfbayes_out
 #' @param what Either `"pars"`, `"theta"` or `"zprobs"`.
-#' @importFrom ggplot2 ggplot aes geom_line geom_rect theme_bw facet_wrap 
+#' @importFrom ggplot2 geom_tile scale_fill_gradient
 #' @export
 plot.hmrfbayes_out <- function(x, what = "pars", burnin = 0.25, ...){
   C <- x$ll@C
@@ -17,7 +17,7 @@ plot.hmrfbayes_out <- function(x, what = "pars", burnin = 0.25, ...){
       facet_wrap(~interaction) +
       theme_bw()
   } else if(what == "zprobs"){
-    l <- lapply(seq(dim(x$zprobs)[3]), function(x) b$zprobs[ , , x])
+    l <- lapply(seq(dim(x$zprobs)[3]), function(b) x$zprobs[ , , b])
     l <- lapply(l, function(slice){
                   data.frame(x = as.vector(row(slice)),
                              y = as.vector(col(slice)),
