@@ -6,6 +6,18 @@
 
 using namespace Rcpp;
 
+// indicator_array
+arma::cube indicator_array(IntegerMatrix z, int C);
+RcppExport SEXP _mrf2dbayes_indicator_array(SEXP zSEXP, SEXP CSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerMatrix >::type z(zSEXP);
+    Rcpp::traits::input_parameter< int >::type C(CSEXP);
+    rcpp_result_gen = Rcpp::wrap(indicator_array(z, C));
+    return rcpp_result_gen;
+END_RCPP
+}
 // inner_gibbs_conditional
 IntegerMatrix inner_gibbs_conditional(IntegerMatrix zinit, arma::fcube& cond_weights, IntegerMatrix R, arma::fcube& theta, int ncycles);
 RcppExport SEXP _mrf2dbayes_inner_gibbs_conditional(SEXP zinitSEXP, SEXP cond_weightsSEXP, SEXP RSEXP, SEXP thetaSEXP, SEXP ncyclesSEXP) {
@@ -23,6 +35,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_mrf2dbayes_indicator_array", (DL_FUNC) &_mrf2dbayes_indicator_array, 2},
     {"_mrf2dbayes_inner_gibbs_conditional", (DL_FUNC) &_mrf2dbayes_inner_gibbs_conditional, 5},
     {NULL, NULL, 0}
 };

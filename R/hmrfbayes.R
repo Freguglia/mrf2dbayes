@@ -43,6 +43,7 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
   mu_current <- mu0
   sigma2_current <- sigma0
   theta_current <- theta0
+  z_counts <- array(0, c(dim(y), C+1))
 
   # Generate Markov Chain
   if(verbose) cat("Running Markov Chain iterations...", "\n")
@@ -77,8 +78,7 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
       z_current <- inner_gibbs_conditional(z_current,
           cond_weights = w, R = mrfi@Rmat, ncycles = 1,
           theta = mrf2d::expand_array(theta_current, family, mrfi, C))
-      # TODO: add some counter for the latenf field in each pixel
-
+      z_counts <- z_counts + indicator_array(z_current, C)
       # Update theta with the newly sampled field
       theta_prop <- theta_current + rnorm(dimtheta, sd = sdkerneltheta)
       if(!a@pass_entire) {
@@ -117,7 +117,8 @@ hmrfbayes <- function(y, llapprox, nsamples = 1000,
   out <- list(dfpars = tibble::as_tibble(dfpars),
               dftheta = tibble::as_tibble(dftheta),
               ll = llapprox,
-              last_z = z_current)
+              last_z = z_current,
+              zprobs = z_counts/nsamples)
 
   class(out) <- "hmrfbayes_out"
   return(out)

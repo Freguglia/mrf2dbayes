@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 <!-- badges: end -->
 
-The goal of mrf2dbayes is to ...
+The goal of `mrf2dbayes` is to provide out-of-the-box implementations of Bayesian inference algorithms for Markov Random Fields on 2-dimensional lattices with pairwise interactions. It can be viewed as a Bayesian extension of the [`mrf2d`](https://github.com/Freguglia/mrf2k) package.
 
 ## Installation
 
