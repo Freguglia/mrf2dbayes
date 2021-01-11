@@ -9,7 +9,7 @@ plot.hmrfbayes_out <- function(x, burnin = 0.25, what = "pars", ...){
                               names_to = "k")
     p <- ggplot(df, aes(x = t, y = value, color = k)) +
       geom_line() + 
-      facet_wrap(~par)
+      facet_wrap(~par, scales = "free")
     return(p)
   } else if(what == "theta"){
 
