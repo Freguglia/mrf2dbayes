@@ -88,7 +88,7 @@ mrfbayes <- function(z, llapprox,
   resdf <- cbind(resdf, mrf2d::vec_description(mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox)
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = FALSE)
   class(out) <- "mrfbayes_out"
   return(out)
 }
