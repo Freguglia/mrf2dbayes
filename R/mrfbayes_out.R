@@ -23,28 +23,55 @@ summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
   df <- object$df
   if(burnin < 1) burnin <- burnin*max(df$t)
   df <- df[df$t>burnin,]
-  stts <- summarize(group_by(df, .data$position, .data$interaction),
-                    q025 = quantile(.data$value, probs = 0.025),
-                    mean = mean(.data$value),
-                    q975 = quantile(.data$value, probs = 0.975),
-                    sd = sd(.data$value))
+  if(!object$rj) {
+    stts <- summarize(group_by(df, .data$position, .data$interaction),
+                      q025 = quantile(.data$value, probs = 0.025),
+                      mean = mean(.data$value),
+                      q975 = quantile(.data$value, probs = 0.975),
+                      sd = sd(.data$value))
+  } else {
+    df <- df[df$value != 0, ]
+    trange <- range(df$t)
+    stts <- summarize(group_by(df, .data$position, .data$interaction),
+                      prob = n()/diff(trange),
+                      q025 = quantile(.data$value, probs = 0.025),
+                      mean = mean(.data$value),
+                      q975 = quantile(.data$value, probs = 0.975),
+                      sd = sd(.data$value))
+  }
   return(stts)
 }
 
 #' @rdname mrfbayes_out
 #' @importFrom ggplot2 ggplot aes geom_line geom_rect theme_bw facet_wrap
+#' @importFrom dplyr %>% mutate group_by arrange
 #' @export
 plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
-  stts <- summary(x, burnin = burnin)
-  tmax <- max(x$df$t)
-  p <- ggplot(x$df) +
-    geom_line(aes(x = .data$t, y = .data$value, color = .data$position)) +
-    geom_rect(data = stts, 
-                aes(xmin = 0, xmax = tmax,
-                    ymin = .data$q025, ymax = .data$q975,
-                    fill = .data$position), alpha = 0.1) +
-    theme_bw() +
-    facet_wrap(~.data$interaction)
+  if(!x$rj){
+    stts <- summary(x, burnin = burnin)
+    tmax <- max(x$df$t)
+    p <- ggplot(x$df) +
+      geom_line(aes(x = .data$t, y = .data$value, color = .data$position)) +
+      geom_rect(data = stts, 
+                  aes(xmin = 0, xmax = tmax,
+                      ymin = .data$q025, ymax = .data$q975,
+                      fill = .data$position), alpha = 0.1) +
+      theme_bw() +
+      facet_wrap(~.data$interaction)
 
-  return(p)
+    return(p)
+  } else {
+    df <- x$df
+    df <- df[df$value != 0.0,]
+    df <- df %>%
+      group_by(.data$position, .data$interaction) %>%
+      mutate(dif = c(0, diff(.data$t) - 1)) %>%
+      mutate(grp = cumsum(.data$dif))
+    p <- ggplot(df, aes(x = .data$t, y = .data$value, color = .data$position)) +
+      geom_line(aes(group = interaction(.data$grp, .data$position))) +
+      theme_bw() +
+      facet_wrap(~.data$interaction)
+
+    return(p)
+  }
 }

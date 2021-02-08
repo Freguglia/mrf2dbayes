@@ -8,9 +8,10 @@ mrfrj(
   z,
   llapprox,
   nsamples = 1000,
-  init_theta = "maximal_zero",
+  init_theta = "pl",
   sdprior = 10,
-  sdkernel = 0.05,
+  sdkernel = 0.01,
+  sdjump = 0.1,
   verbose = interactive()
 )
 }

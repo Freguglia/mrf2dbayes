@@ -6,7 +6,8 @@
 #' (zero equality) to be visitted, providing a model selection framework along
 #' with the Bayesian solution for inference within models.
 #'
-#' @param llapprox A `llapprox` object based on the maximal interaction structure.
+#' @param llapprox A `llapprox` object based on the maximal interaction
+#' structure.
 #' @param z The observed random field.
 #' @param llapprox The likelihood approximation to be used.
 #' @param nsamples Number of MCMC samples.
@@ -23,8 +24,9 @@
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @export
 mrfrj <- function(z, llapprox,
-                  nsamples = 1000, init_theta = "zero",
-                  sdprior = 10, sdkernel = 0.05,
+                  nsamples = 1000, init_theta = "pl",
+                  sdprior = 10, sdkernel = 0.01,
+                  sdjump = 0.1,
                   verbose = interactive()){
 
   # Initialize meta-parameters and do some checks
@@ -89,19 +91,31 @@ mrfrj <- function(z, llapprox,
       vec_jump <- seq_len(npos) == jump_pos
 
       if(included[jump_pos]){ # Delete the selected position
-        proposed_theta <- current_theta * rep(included*(1 - vec_jump), each = dim_per_group)
+        proposed_theta <- current_theta * rep(included*(!vec_jump), each = dim_per_group)
 
         logA <- llapprox@lafn(z_arg, proposed_theta) +
           sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
           llapprox@lafn(z_arg, current_theta) -
-          sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+          sum(dnorm(current_theta, sd = sdprior, log = TRUE)) +
+          sum(dnorm(current_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE))
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
           included <- included - vec_jump
         }
 
       } else { # Add the selected position
-
+        proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdjump)*rep(vec_jump, each = dim_per_group)
+        
+        logA <- llapprox@lafn(z_arg, proposed_theta) +
+          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+          llapprox@lafn(z_arg, current_theta) -
+          sum(dnorm(current_theta, sd = sdprior, log = TRUE)) -
+          sum(dnorm(proposed_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE))
+        
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+          included <- included + vec_jump
+        }
       }
 
     # Shift a position
