@@ -12,6 +12,7 @@ mrfrj(
   sdprior = 10,
   sdkernel = 0.01,
   sdjump = 0.1,
+  logpenalty = log(prod(dim(z))),
   verbose = interactive()
 )
 }

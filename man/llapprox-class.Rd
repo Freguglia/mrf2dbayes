@@ -21,6 +21,8 @@ properties.}
 \itemize{
 \item \code{"pseudo"} for Pseudolikelihood approximation (which will result in
 Pseudoposteriors).
+\item \code{"adj.pseudo"} for mode and curvature adjusted Pseudolikelihood
+approximation.
 \item \code{"gt"} for Geyer-Thompson.
 \item \code{"wanglandau"} for the Wang-Landau algorithm.
 }}
@@ -30,6 +32,13 @@ should be printed.}
 
 \item{...}{Extra options passed depending on the method used.
 \itemize{
+\item If the selected method is \code{"adj.pseudo"}:
+\itemize{
+\item \code{gamma_seq}: a sequence to be used by the Stochastic Approximation
+alforithm to find the Maximum Likelihood Estimator. See \code{?mrf2d::fit_sa}
+\item \code{nsamples}: Number of samples drawn for the Monte-Carlo estimate of
+the Likelihood function Hessian. Set to 1000 if unspecified.
+}
 \item If the selected method is \code{"gt"}:
 \itemize{
 \item \code{reference}: A reference parameter value (theta), either as an array
@@ -37,7 +46,7 @@ or a vector of appropriate length.
 \item \code{nsamples}: The number of samples to be used in the approximation.
 \item \code{ncycles}: The number of Gibbs Sampler cycles between each sample.
 }
-\item If the selected methid is \code{"wanglandau"}:
+\item If the selected method is \code{"wanglandau"}:
 \itemize{
 \item \code{reference}:
 }

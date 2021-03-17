@@ -45,15 +45,22 @@ setMethod("show", "llapprox",
 #' @param method Which type of approximation should be created. Options are:
 #'   * `"pseudo"` for Pseudolikelihood approximation (which will result in
 #'   Pseudoposteriors).
+#'   * `"adj.pseudo"` for mode and curvature adjusted Pseudolikelihood
+#'   approximation.
 #'   * `"gt"` for Geyer-Thompson.
 #'   * `"wanglandau"` for the Wang-Landau algorithm.
 #' @param ... Extra options passed depending on the method used.
+#'   * If the selected method is `"adj.pseudo"`:
+#'     * `gamma_seq`: a sequence to be used by the Stochastic Approximation
+#'     alforithm to find the Maximum Likelihood Estimator. See `?mrf2d::fit_sa`
+#'     * `nsamples`: Number of samples drawn for the Monte-Carlo estimate of 
+#'     the Likelihood function Hessian. Set to 1000 if unspecified.
 #'   * If the selected method is `"gt"`:
 #'     * `reference`: A reference parameter value (theta), either as an array
 #'     or a vector of appropriate length.
 #'     * `nsamples`: The number of samples to be used in the approximation.
 #'     * `ncycles`: The number of Gibbs Sampler cycles between each sample.
-#'   * If the selected methid is `"wanglandau"`:
+#'   * If the selected method is `"wanglandau"`:
 #'     * `reference`:
 #' @param verbose `logical` value indicating wheter the algorithm progress
 #'   should be printed.
@@ -63,6 +70,7 @@ setMethod("show", "llapprox",
 #' @return a `llapprox` object.
 #'
 #' @importFrom Brobdingnag as.brob
+#' @importFrom mrf2d expand_array
 #'
 #' @author Victor Freguglia
 #' @export
@@ -84,6 +92,50 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
             theta_arr <- mrf2d::expand_array(theta_vec, family, mrfi, C)
             mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
         }
+    } else if(method == "adj.pseudo"){
+        la@method <- "adj.pseudo"
+        la@pass_entire <- TRUE
+
+        if(is.null(extra_args$gamma_seq)){
+            stop("The argument 'gamma_seq' must be specified for method 'adj.pseudo'.")
+        }
+        if(is.null(extra_args$nsamples)){
+          nsamples <- 1000
+        } else {
+          nsamples <- extra_args$nsamples
+        }
+        
+        # Find MLE and MPLE
+        if(verbose) {cat("Obtaining Maximum Pseudolikelihood estimates...")}
+        plfit <- mrf2d::fit_pl(refz, mrfi, family, return_optim = TRUE)
+        mple <- mrf2d::smr_array(plfit$theta, family)
+        if(verbose) {cat("Done!\n")}
+        
+        if(verbose) {cat("Obtaining Maximum Likelihood estimates via Stochastic Approximation...\n")}
+        mlfit <- mrf2d::fit_sa(refz, mrfi, family, extra_args$gamma_seq,
+                               verbose = verbose, init = mple)
+        mle <- mrf2d::smr_array(mlfit$theta, family)
+        if(verbose) {cat("Done!\n")}
+
+        if(verbose) {cat("Generating Monte-Carlo samples to estimate Likelihood Hessian...\n")}
+        samples <- mrf2d::rmrf2d_mc(refz, mrfi, mlfit$theta, family, nmc = nsamples,
+                                    verbose = verbose)
+        Tbar <- apply(samples, MARGIN = 2, mean)
+        Tbar %*% t(Tbar)
+        Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>%
+          apply(MARGIN = 1, mean)
+        Hsa <- -(Etz - (Tbar %*% t(Tbar)))
+        Hpl <- plfit$opt.hessian
+        N <- chol(-Hsa)
+        M <- chol(-Hpl)
+        W <- solve(M)%*%N
+        if(verbose) {cat("Done!\n")}
+
+        la@lafn <- function(z, theta_vec){
+            theta_arr <- mrf2d::expand_array(mple + W%*%(theta_vec - mle), family, mrfi, C)
+            mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
+        }
+
     } else if(method == "gt"){
         la@method <- "gt"
         la@pass_entire <- FALSE
