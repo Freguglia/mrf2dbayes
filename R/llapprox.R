@@ -15,6 +15,8 @@
 #'   statistics (`FALSE`).
 #' @slot method The method used to create that function.
 #' @slot internal_data Internal data to be used by the approximating function.
+#'
+#' @importFrom glue glue
 #' @exportClass llapprox
 setClass("llapprox",
     representation(lafn = "function",
@@ -30,8 +32,8 @@ setMethod("show", "llapprox",
         method_name <- switch(object@method,
             pseudo = "Pseudolikelihood",
             gt = "Geyer-Thompson method")
-        cat(glue::glue("Log-Likelihood funcion approximation via {method_name}"), "\n")
-        cat(glue::glue("Interaction structure: "), mrf2d::mrfi_to_string(object@mrfi), "\n")
+        cat(glue("Log-Likelihood funcion approximation via {method_name}"), "\n")
+        cat(glue("Interaction structure: {mrf2d::mrfi_to_string(object@mrfi)}"), "\n")
     })
 
 #' @rdname llapprox-class
@@ -61,7 +63,10 @@ setMethod("show", "llapprox",
 #'     * `nsamples`: The number of samples to be used in the approximation.
 #'     * `ncycles`: The number of Gibbs Sampler cycles between each sample.
 #'   * If the selected method is `"wanglandau"`:
-#'     * `reference`:
+#'     * `theta_list`: A list of vectors with reference points for the 
+#'     parameter vector.
+#'     * `cycles`: Number of cycles in between samples. Defaults to 2.
+#'     * `h`: Bandwidth to be used in the smoother function. Defaults to 10.
 #' @param verbose `logical` value indicating wheter the algorithm progress
 #'   should be printed.
 #'
@@ -69,8 +74,9 @@ setMethod("show", "llapprox",
 #'
 #' @return a `llapprox` object.
 #'
-#' @importFrom Brobdingnag as.brob
-#' @importFrom mrf2d expand_array
+#' @importFrom Brobdingnag as.brob cbrob
+#' @importFrom mrf2d expand_array fit_pl pl_mrf2d smr_array rmrf2d
+#' @importFrom purrr map2 map map_dbl map_chr
 #'
 #' @author Victor Freguglia
 #' @export
@@ -89,8 +95,8 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         la@method <- "pseudo"
         la@pass_entire <- TRUE
         la@lafn <- function(z, theta_vec){
-            theta_arr <- mrf2d::expand_array(theta_vec, family, mrfi, C)
-            mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
+            theta_arr <- expand_array(theta_vec, family, mrfi, C)
+            pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
         }
     } else if(method == "adj.pseudo"){
         la@method <- "adj.pseudo"
@@ -107,8 +113,8 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         
         # Find MLE and MPLE
         if(verbose) {cat("Obtaining Maximum Pseudolikelihood estimates...")}
-        plfit <- mrf2d::fit_pl(refz, mrfi, family, return_optim = TRUE)
-        mple <- mrf2d::smr_array(plfit$theta, family)
+        plfit <- fit_pl(refz, mrfi, family, return_optim = TRUE)
+        mple <- smr_array(plfit$theta, family)
         if(verbose) {cat("Done!\n")}
         
         if(verbose) {cat("Obtaining Maximum Likelihood estimates via Stochastic Approximation...\n")}
@@ -174,8 +180,80 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
             return(as.vector(t(z) %*% theta_vec) - logzeta)
         }
         la@internal_data <- list(mcsamples = Tzmat)
+
     } else if(method == "wl") {
-        # TODO: Implement Wang-Landau approximation
+        if(is.null(extra_args$theta_list)){
+            stop("The argument 'theta_list' must be specified for method 'wl'.")
+        }
+        if(is.null(extra_args$gamma_seq)){
+            stop("The argument 'gamma_seq' must be specified for method 'wl'.")
+        }
+        if(is.null(extra_args$cycles)){
+          cycles <- 2
+        } else {cycles <- extra_args$cycles}
+        if(is.null(extra_args$h)){
+          h <- 10
+        } else {cycles <- extra_args$h}
+        theta_list <- extra_args$theta_list
+        gamma_seq <- extra_args$gamma_seq
+        la@method <- "wl"
+        la@pass_entire <- FALSE
+        theta_is_array <- all(map_chr(theta_list, class) == "array")
+        if(theta_is_array){
+            theta_list_a <- theta_list
+            theta_list_v <- map(theta_list, ~mrf2d::smr_array(.x, family))
+        } else {
+            theta_list_a <- map(theta_list, ~mrf2d::expand_array(.x, family = family, mrfi = mrfi, C = C))
+            theta_list_v <- theta_list
+        }
+        kmix <- length(theta_list)
+        N <- length(gamma_seq)
+        theta_list_m <- do.call(rbind, theta_list_v)
+
+        I <- integer(N)
+        z <- rmrf2d(dim(refz), mrfi = mrfi, theta = theta_list_a[[sample(1:kmix, 1)]], cycles = 60)
+        ss <- mrf2d::smr_stat(z, mrfi, family)
+        ssmat <- matrix(nrow = N, ncol = length(ss))
+        
+        cvec <- numeric(kmix) + max(theta_list_m %*% ss)
+        cvec_hist <- matrix(nrow = N, ncol = length(cvec)) 
+        
+        
+        for(i in 1:N){
+          I[i] <- sample(1:kmix, 1, 
+                         prob = exp((theta_list_m %*% ss) - cvec))
+          z <- rmrf2d(z, mrfi = mrfi, theta = theta_list_a[[I[i]]], cycles = cycles)
+          ss <- smr_stat(z, mrfi, family)
+          ssmat[i, ] <- ss
+          cvec_hist[i, ] <- cvec - cvec[1]
+          cvec <- cvec + gamma_seq[i]*((seq_len(kmix)==I[i]) - 1/kmix)
+          cvec <- cvec + max((theta_list_m %*% ss) - cvec)
+          if(verbose) cat("\r", i)
+        }
+        la@internal_data <- list(stat_hist = ssmat, cvec_hist = cvec_hist, I_hist = I)
+        mixdf <- map(seq_along(theta_list), ~ssmat[I==.x,])
+        
+        smoother <- function(theta){
+          dists <- map_dbl(theta_list_v, ~sum((.x - theta)^2))
+          s <- exp(-0.5/h*dists)
+          return(s/sum(s))
+        }
+        cvec2 <- colMeans(as.data.frame(cvec_hist[(N*0.75):N,]))
+        zeta <- function(theta){
+          Hs <- map2(mixdf, theta_list_v, ~as.matrix(.x) %*% (theta - .y))
+          Hs <- map(Hs, ~exp(as.brob(as.vector(.x))))
+          Hs <- map(Hs, ~Brobdingnag::sum(.x)/length(.x))
+          Hs <- do.call(cbrob, Hs)
+          Hs <- Hs * exp(as.brob(cvec2))
+          weights <- smoother(theta)
+          Hs <- Hs*weights
+          Hs %>% Brobdingnag::sum() %>% log() %>% as.numeric()
+        }
+
+        la@lafn <- function(z, theta_vec){
+            sum(z*theta_vec) - zeta(theta_vec) 
+        }
+        
     } else {
         stop(glue::glue("'{method}' is not a valid method."))
     }

@@ -48,7 +48,10 @@ or a vector of appropriate length.
 }
 \item If the selected method is \code{"wanglandau"}:
 \itemize{
-\item \code{reference}:
+\item \code{theta_list}: A list of vectors with reference points for the
+parameter vector.
+\item \code{cycles}: Number of cycles in between samples. Defaults to 2.
+\item \code{h}: Bandwidth to be used in the smoother function. Defaults to 10.
 }
 }}
 }
