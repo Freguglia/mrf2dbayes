@@ -126,19 +126,19 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         if(verbose) {cat("Generating Monte-Carlo samples to estimate Likelihood Hessian...\n")}
         samples <- as.matrix(mrf2d::rmrf2d_mc(refz, mrfi, mlfit$theta, family, nmc = nsamples,
                                     verbose = verbose))
-        Tbar <- apply(samples, MARGIN = 2, mean)
-        Tbar %*% t(Tbar)
-        Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>%
-          apply(MARGIN = 1, mean)
+        Tbar <- as.matrix(apply(samples, MARGIN = 2, mean))
+        Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>% 
+            as.matrix() %>% apply(MARGIN = 1, mean) %>% as.matrix()
+        if(length(Tbar) == 1) Etz <- mean(Etz)
         Hsa <- -(Etz - (Tbar %*% t(Tbar)))
         Hpl <- plfit$opt.hessian
-        N <- chol(-Hsa)
-        M <- chol(-Hpl)
-        W <- solve(M)%*%N
+        N <- chol(as.matrix(-Hsa))
+        M <- chol(as.matrix(-Hpl))
+        W <- as.matrix(solve(M)%*%N)
         if(verbose) {cat("Done!\n")}
 
         la@lafn <- function(z, theta_vec){
-            theta_arr <- mrf2d::expand_array(mple + W%*%(theta_vec - mle), family, mrfi, C)
+            theta_arr <- mrf2d::expand_array(mple + as.vector(W%*%(theta_vec - mle)), family, mrfi, C)
             mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
         }
 
