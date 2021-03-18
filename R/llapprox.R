@@ -124,8 +124,8 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         if(verbose) {cat("Done!\n")}
 
         if(verbose) {cat("Generating Monte-Carlo samples to estimate Likelihood Hessian...\n")}
-        samples <- mrf2d::rmrf2d_mc(refz, mrfi, mlfit$theta, family, nmc = nsamples,
-                                    verbose = verbose)
+        samples <- as.matrix(mrf2d::rmrf2d_mc(refz, mrfi, mlfit$theta, family, nmc = nsamples,
+                                    verbose = verbose))
         Tbar <- apply(samples, MARGIN = 2, mean)
         Tbar %*% t(Tbar)
         Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>%
@@ -193,7 +193,7 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         } else {cycles <- extra_args$cycles}
         if(is.null(extra_args$h)){
           h <- 10
-        } else {cycles <- extra_args$h}
+        } else {h <- extra_args$h}
         theta_list <- extra_args$theta_list
         gamma_seq <- extra_args$gamma_seq
         la@method <- "wl"
