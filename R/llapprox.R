@@ -15,6 +15,7 @@
 #'   statistics (`FALSE`).
 #' @slot method The method used to create that function.
 #' @slot internal_data Internal data to be used by the approximating function.
+#' @slot ptime Time (in seconds) used to compute the approximation.
 #'
 #' @importFrom glue glue
 #' @exportClass llapprox
@@ -25,7 +26,8 @@ setClass("llapprox",
         C = "numeric",
         pass_entire = "logical",
         method = "character",
-        internal_data = "list"))
+        internal_data = "list",
+        ptime = "numeric"))
 
 setMethod("show", "llapprox",
     function(object){
@@ -82,6 +84,7 @@ setMethod("show", "llapprox",
 #' @export
 llapprox <- function(refz, mrfi, family, method = "pseudo",
     verbose = interactive(), ...){
+    start_time <- Sys.time()
     la <- methods::new("llapprox")
     C <- length(unique(as.vector(refz))) - 1
 
@@ -257,6 +260,7 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
     } else {
         stop(glue::glue("'{method}' is not a valid method."))
     }
-
+    end_time <- Sys.time()
+    la@ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
     return(la)
 }

@@ -82,6 +82,8 @@ statistics (\code{FALSE}).}
 \item{\code{method}}{The method used to create that function.}
 
 \item{\code{internal_data}}{Internal data to be used by the approximating function.}
+
+\item{\code{ptime}}{Time (in seconds) used to compute the approximation.}
 }}
 
 \author{
