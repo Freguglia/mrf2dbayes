@@ -21,7 +21,7 @@ mrfbayes <- function(z, llapprox,
                      nsamples = 1000, init_theta = "zero",
                      sdprior = 10, sdkernel = 0.05,
                      verbose = interactive()){
-
+  start_time <- Sys.time()
   # Initialize meta-parameters and do some checks
   family <- llapprox@family
   mrfi <- llapprox@mrfi
@@ -88,7 +88,10 @@ mrfbayes <- function(z, llapprox,
   resdf <- cbind(resdf, mrf2d::vec_description(mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = FALSE)
+  end_time <- Sys.time()
+
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = FALSE, 
+              ptime = as.numeric(difftime(end_time, start_time, units = "secs")))
   class(out) <- "mrfbayes_out"
   return(out)
 }
