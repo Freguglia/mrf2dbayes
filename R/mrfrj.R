@@ -29,6 +29,7 @@ mrfrj <- function(z, llapprox,
                   sdjump = 0.1,
                   logpenalty = log(prod(dim(z))),
                   verbose = interactive()){
+  start_time <- Sys.time()
 
   # Initialize meta-parameters and do some checks
   family <- llapprox@family
@@ -142,7 +143,11 @@ mrfrj <- function(z, llapprox,
   resdf <- cbind(resdf, mrf2d::vec_description(maximal_mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE)
+  end_time <- Sys.time()
+  ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
+
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE, 
+              ptime = ptime)
   class(out) <- "mrfbayes_out"
   return(out)
 }

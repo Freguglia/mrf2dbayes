@@ -24,7 +24,8 @@ Imports:
     Brobdingnag,
     ggplot2,
     glue,
-    rlang
+    rlang,
+    purrr
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp, 
            RcppArmadillo

@@ -1,4 +1,4 @@
-#' @rdname hmrfbayes_out
+#' @rdname hmrfbayes
 #' @param what Either `"pars"`, `"theta"` or `"zprobs"`.
 #' @importFrom ggplot2 geom_tile scale_fill_gradient
 #' @export

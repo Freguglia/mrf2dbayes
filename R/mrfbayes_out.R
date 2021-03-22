@@ -15,7 +15,7 @@ print.mrfbayes_out <- function(x, ...){
 }
 
 #' @rdname mrfbayes_out
-#' @importFrom dplyr group_by summarize
+#' @importFrom dplyr group_by summarize n
 #' @importFrom stats quantile sd
 #' @importFrom rlang .data
 #' @export
