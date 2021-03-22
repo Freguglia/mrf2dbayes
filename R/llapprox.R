@@ -129,7 +129,8 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         Tbar <- as.matrix(apply(samples, MARGIN = 2, mean))
         Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>% 
             as.matrix() %>% apply(MARGIN = 1, mean) %>% as.matrix()
-        if(length(Tbar) == 1) Etz <- mean(Etz)
+        if(length(Tbar) == 1) { Etz <- mean(Etz) }
+        else { Etz <- as.vector(Etz) }
         Hsa <- -(Etz - (Tbar %*% t(Tbar)))
         Hpl <- plfit$opt.hessian
         N <- chol(as.matrix(-Hsa))
