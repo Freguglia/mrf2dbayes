@@ -145,6 +145,7 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
             theta_arr <- mrf2d::expand_array(mple + as.vector(W%*%(theta_vec - mle)), family, mrfi, C)
             mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
         }
+        la@internal_data <- list(mle = mle, mple = mple, samples_hessian = samples, fit_sa = mlfit)
 
     } else if(method == "gt"){
         la@method <- "gt"
