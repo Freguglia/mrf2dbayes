@@ -7,10 +7,10 @@
 grwmrfi(
   z,
   llapprox,
-  maximal_mrfi,
-  init_mrfi = maximal_mrfi,
   nsamples = 10000,
-  nbatch = 100
+  nbatch = 100,
+  sdprior = 1,
+  verbose = interactive()
 )
 }
 \arguments{
