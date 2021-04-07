@@ -35,7 +35,6 @@ grwmrfi <- function(z, llapprox, nsamples = 10000, nbatch = 100,
   included <- rep(TRUE, npos)
   current_mrfi_string <- mrfi_to_string(current_mrfi)
   psi <- ns <- mrfi_chain <- numeric(nsamples)
-  psi <- psi + 1
   psi <- as.brob(psi)
 
   for(t in seq_len(nsamples)){
@@ -70,7 +69,7 @@ grwmrfi <- function(z, llapprox, nsamples = 10000, nbatch = 100,
     ns[which_proposed] <- ns[which_proposed] + nbatch
 
     U <- runif(1)
-    if(U < psi[which_proposed]*(2^length(proposed_mrfi))/psi[which_current]/(2^length(current_mrfi))){
+    if(U < psi[which_proposed]/(2^length(proposed_mrfi))/psi[which_current]*(2^length(current_mrfi))){
       mrfi_chain[t] <- which_proposed
       current_mrfi <- proposed_mrfi
       current_mrfi_string <- string_proposed
