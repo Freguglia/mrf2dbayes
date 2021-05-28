@@ -61,7 +61,8 @@ mrfrj <- function(z, llapprox,
       current_theta <- mrf2d::smr_array(current_theta, family)
     }
   } else if(is.array(init_theta)){
-
+    current_theta <- init_theta
+    current_theta <- mrf2d::smr_array(current_theta, family)
   } else {
     current_theta <- init_theta
   }
@@ -146,7 +147,7 @@ mrfrj <- function(z, llapprox,
   end_time <- Sys.time()
   ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE, 
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE,
               ptime = ptime)
   class(out) <- "mrfbayes_out"
   return(out)

@@ -8,8 +8,10 @@ grwmrfi(
   z,
   llapprox,
   nsamples = 10000,
-  nbatch = 100,
-  sdprior = 1,
+  nbatch = 10,
+  first_batch = 1000,
+  sdprior = 2,
+  init_mrfi = mrfi(1),
   verbose = interactive()
 )
 }
