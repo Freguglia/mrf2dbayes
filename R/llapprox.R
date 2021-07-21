@@ -57,7 +57,7 @@ setMethod("show", "llapprox",
 #'   * If the selected method is `"adj.pseudo"`:
 #'     * `gamma_seq`: a sequence to be used by the Stochastic Approximation
 #'     alforithm to find the Maximum Likelihood Estimator. See `?mrf2d::fit_sa`
-#'     * `nsamples`: Number of samples drawn for the Monte-Carlo estimate of 
+#'     * `nsamples`: Number of samples drawn for the Monte-Carlo estimate of
 #'     the Likelihood function Hessian. Set to 1000 if unspecified.
 #'   * If the selected method is `"gt"`:
 #'     * `reference`: A reference parameter value (theta), either as an array
@@ -65,7 +65,7 @@ setMethod("show", "llapprox",
 #'     * `nsamples`: The number of samples to be used in the approximation.
 #'     * `ncycles`: The number of Gibbs Sampler cycles between each sample.
 #'   * If the selected method is `"wanglandau"`:
-#'     * `theta_list`: A list of vectors with reference points for the 
+#'     * `theta_list`: A list of vectors with reference points for the
 #'     parameter vector.
 #'     * `cycles`: Number of cycles in between samples. Defaults to 2.
 #'     * `h`: Bandwidth to be used in the smoother function. Defaults to 10.
@@ -113,13 +113,26 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         } else {
           nsamples <- extra_args$nsamples
         }
-        
+
         # Find MLE and MPLE
         if(verbose) {cat("Obtaining Maximum Pseudolikelihood estimates...")}
-        plfit <- fit_pl(refz, mrfi, family, return_optim = TRUE)
-        mple <- smr_array(plfit$theta, family)
+        if(family == "free"){
+          pl <- function(thetav){
+            pl_mrf2d(refz, mrfi, expand_array(thetav, family, mrfi, C))
+          }
+          pl_gr <- function(thetav){
+            smr_array(mrf2d:::grad_pl_free_nosub(thetav, refz, mrfi), "free")
+          }
+          vec0 <- smr_array(array(0, dim = c(C+1, C+1, length(mrfi))), "free")
+          plfit <- optim(vec0, fn = pl, gr = pl_gr, method = "BFGS",
+                         control = list(fnscale = -1), hessian = TRUE)
+          mple <- plfit$par
+        } else {
+          plfit <- fit_pl(refz, mrfi, family, return_optim = TRUE)
+          mple <- smr_array(plfit$theta, family)
+        }
         if(verbose) {cat("Done!\n")}
-        
+
         if(verbose) {cat("Obtaining Maximum Likelihood estimates via Stochastic Approximation...\n")}
         mlfit <- mrf2d::fit_sa(refz, mrfi, family, extra_args$gamma_seq,
                                verbose = verbose, init = mple)
@@ -130,12 +143,13 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         samples <- as.matrix(mrf2d::rmrf2d_mc(refz, mrfi, mlfit$theta, family, nmc = nsamples,
                                     verbose = verbose))
         Tbar <- as.matrix(apply(samples, MARGIN = 2, mean))
-        Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>% 
+        Etz <- apply(samples, MARGIN = 1, function(x) x%*%t(x)) %>%
             as.matrix() %>% apply(MARGIN = 1, mean) %>% as.matrix()
         if(length(Tbar) == 1) { Etz <- mean(Etz) }
         else { Etz <- as.vector(Etz) }
         Hsa <- -(Etz - (Tbar %*% t(Tbar)))
         Hpl <- plfit$opt.hessian
+        if(family == "free") Hpl <- plfit$hessian
         N <- chol(as.matrix(-Hsa))
         M <- chol(as.matrix(-Hpl))
         W <- as.matrix(solve(M)%*%N)
@@ -219,13 +233,13 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         z <- rmrf2d(dim(refz), mrfi = mrfi, theta = theta_list_a[[sample(1:kmix, 1)]], cycles = 60)
         ss <- mrf2d::smr_stat(z, mrfi, family)
         ssmat <- matrix(nrow = N, ncol = length(ss))
-        
+
         cvec <- numeric(kmix) + max(theta_list_m %*% ss)
-        cvec_hist <- matrix(nrow = N, ncol = length(cvec)) 
-        
-        
+        cvec_hist <- matrix(nrow = N, ncol = length(cvec))
+
+
         for(i in 1:N){
-          I[i] <- sample(1:kmix, 1, 
+          I[i] <- sample(1:kmix, 1,
                          prob = exp((theta_list_m %*% ss) - cvec))
           z <- rmrf2d(z, mrfi = mrfi, theta = theta_list_a[[I[i]]], cycles = cycles)
           ss <- smr_stat(z, mrfi, family)
@@ -237,7 +251,7 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         }
         la@internal_data <- list(stat_hist = ssmat, cvec_hist = cvec_hist, I_hist = I)
         mixdf <- map(seq_along(theta_list), ~ssmat[I==.x,])
-        
+
         smoother <- function(theta){
           dists <- map_dbl(theta_list_v, ~sum((.x - theta)^2))
           s <- exp(-0.5/h*dists)
@@ -256,9 +270,9 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
         }
 
         la@lafn <- function(z, theta_vec){
-            sum(z*theta_vec) - zeta(theta_vec) 
+            sum(z*theta_vec) - zeta(theta_vec)
         }
-        
+
     } else {
         stop(glue::glue("'{method}' is not a valid method."))
     }
