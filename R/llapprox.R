@@ -33,7 +33,8 @@ setMethod("show", "llapprox",
     function(object){
         method_name <- switch(object@method,
             pseudo = "Pseudolikelihood",
-            gt = "Geyer-Thompson method")
+            gt = "Geyer-Thompson method",
+            adj.pseudo = "Adjusted Pseudo-Likelihood")
         cat(glue("Log-Likelihood funcion approximation via {method_name}"), "\n")
         cat(glue("Interaction structure: {mrf2d::mrfi_to_string(object@mrfi)}"), "\n")
     })
@@ -51,6 +52,7 @@ setMethod("show", "llapprox",
 #'   Pseudoposteriors).
 #'   * `"adj.pseudo"` for mode and curvature adjusted Pseudolikelihood
 #'   approximation.
+#'   * `"ma.pseudo"` for mode adjusted Pseudolikelihood
 #'   * `"gt"` for Geyer-Thompson.
 #'   * `"wanglandau"` for the Wang-Landau algorithm.
 #' @param ... Extra options passed depending on the method used.
@@ -160,6 +162,46 @@ llapprox <- function(refz, mrfi, family, method = "pseudo",
             mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
         }
         la@internal_data <- list(mle = mle, mple = mple, samples_hessian = samples, fit_sa = mlfit)
+
+    } else if(method == "ma.pseudo"){
+        la@method <- "ma.pseudo"
+        la@pass_entire <- TRUE
+
+        if(is.null(extra_args$gamma_seq)){
+            stop("The argument 'gamma_seq' must be specified for method 'adj.pseudo'.")
+        }
+
+        # Find MLE and MPLE
+        if(verbose) {cat("Obtaining Maximum Pseudolikelihood estimates...")}
+        if(family == "free"){
+          pl <- function(thetav){
+            pl_mrf2d(refz, mrfi, expand_array(thetav, family, mrfi, C))
+          }
+          pl_gr <- function(thetav){
+            smr_array(mrf2d:::grad_pl_free_nosub(thetav, refz, mrfi), "free")
+          }
+          vec0 <- smr_array(array(0, dim = c(C+1, C+1, length(mrfi))), "free")
+          plfit <- optim(vec0, fn = pl, gr = pl_gr, method = "BFGS",
+                         control = list(fnscale = -1), hessian = TRUE)
+          mple <- plfit$par
+        } else {
+          plfit <- fit_pl(refz, mrfi, family, return_optim = TRUE)
+          mple <- smr_array(plfit$theta, family)
+        }
+        if(verbose) {cat("Done!\n")}
+
+        if(verbose) {cat("Obtaining Maximum Likelihood estimates via Stochastic Approximation...\n")}
+        mlfit <- mrf2d::fit_sa(refz, mrfi, family, extra_args$gamma_seq,
+                               verbose = verbose, init = mple)
+        mle <- mrf2d::smr_array(mlfit$theta, family)
+        if(verbose) {cat("Done!\n")}
+
+
+        la@lafn <- function(z, theta_vec){
+            theta_arr <- mrf2d::expand_array(theta_vec - mle + mple, family, mrfi, C)
+            mrf2d::pl_mrf2d(z, mrfi, theta_arr, log_scale = TRUE)
+        }
+        la@internal_data <- list(mle = mle, mple = mple, fit_sa = mlfit)
 
     } else if(method == "gt"){
         la@method <- "gt"

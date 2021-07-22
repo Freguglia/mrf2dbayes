@@ -23,6 +23,7 @@ properties.}
 Pseudoposteriors).
 \item \code{"adj.pseudo"} for mode and curvature adjusted Pseudolikelihood
 approximation.
+\item \code{"ma.pseudo"} for mode adjusted Pseudolikelihood
 \item \code{"gt"} for Geyer-Thompson.
 \item \code{"wanglandau"} for the Wang-Landau algorithm.
 }}

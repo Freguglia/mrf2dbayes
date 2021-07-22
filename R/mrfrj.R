@@ -57,8 +57,12 @@ mrfrj <- function(z, llapprox,
     if(init_theta == "zero"){
       current_theta <- T_zobs*0
     } else if(init_theta == "pl") {
-      current_theta <- mrf2d::fit_pl(z, maximal_mrfi, family)$theta
-      current_theta <- mrf2d::smr_array(current_theta, family)
+      if(!is.null(llapprox@internal_data$mple)){
+        current_theta <- llapprox@internal_data$mple
+      } else {
+        current_theta <- mrf2d::fit_pl(z, maximal_mrfi, family)$theta
+        current_theta <- mrf2d::smr_array(current_theta, family)
+      }
     }
   } else if(is.array(init_theta)){
     current_theta <- init_theta
