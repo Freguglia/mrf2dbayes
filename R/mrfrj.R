@@ -55,7 +55,7 @@ mrfrj <- function(z, llapprox,
   ## Start in the maximal model
   if(is.character(init_theta)){
     if(init_theta == "zero"){
-      current_theta <- T_zobs*0
+      current_theta <- rnorm(length(T_zobs), mean = 0, sd = 0.01)
     } else if(init_theta == "pl") {
       if(!is.null(llapprox@internal_data$mple)){
         current_theta <- llapprox@internal_data$mple
@@ -77,7 +77,7 @@ mrfrj <- function(z, llapprox,
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(c("jump", "within"), size = 1)
+    move <- sample(c("jump", "within", "share"), size = 1)
 
     # Walk within the current model
     if(move == "within"){
@@ -127,7 +127,30 @@ mrfrj <- function(z, llapprox,
         }
       }
 
-    # Shift a position
+    # Share weights of a particular interaction between two positions
+    } else if(move == "share"){
+      if(sum(included) > 1){
+        # Propose
+        to_share <- sample(which(as.logical(included)), 2, replace = TRUE)
+        w <- runif(1, 1/10, 9/10)
+        if(runif(1) < 1/2) w <- 1/w
+        sum2 <- (current_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)] +
+          current_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)])
+        proposed_theta <- current_theta
+        proposed_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)] <-
+         sum2*w
+        proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)] <-
+         sum2*(1-w)
+
+        logA <- llapprox@lafn(z_arg, proposed_theta) +
+          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+          llapprox@lafn(z_arg, current_theta) -
+          sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+        if(is.nan(logA)) logA <- -Inf
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+        }
+      }
     }
 
     # Store results
