@@ -8,10 +8,10 @@ mrfrj(
   z,
   llapprox,
   nsamples = 1000,
-  init_theta = "pl",
-  sdprior = 10,
-  sdkernel = 0.01,
-  sdjump = 0.1,
+  init_theta = "zero",
+  sdprior = 1,
+  sdkernel = 0.005,
+  sdjump = 0.05,
   logpenalty = log(prod(dim(z))),
   verbose = interactive()
 )

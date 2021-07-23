@@ -55,7 +55,7 @@ mrfrj <- function(z, llapprox,
   ## Start in the maximal model
   if(is.character(init_theta)){
     if(init_theta == "zero"){
-      current_theta <- rnorm(length(T_zobs), mean = 0, sd = 0.01)
+      current_theta <- rnorm(length(T_zobs), mean = 0, sd = 0.01)*0
     } else if(init_theta == "pl") {
       if(!is.null(llapprox@internal_data$mple)){
         current_theta <- llapprox@internal_data$mple
@@ -73,12 +73,18 @@ mrfrj <- function(z, llapprox,
   current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
-  included <- rep(TRUE, length(maximal_mrfi))
+  included <- rep(FALSE, length(maximal_mrfi))
+  proposals <- data.frame(t = 1:nsamples,
+                          move = factor(character(nsamples),
+                                        levels = c("swap", "within", "jump", "share")),
+                          logA = numeric(nsamples),
+                          extraInfo = character(nsamples))
 
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
     move <- sample(c("jump", "within", "share", "swap"), size = 1)
+    proposals$move[i] <- move
 
     # Walk within the current model
     if(move == "within"){
@@ -90,6 +96,8 @@ mrfrj <- function(z, llapprox,
         sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
         current_lafn -
         sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+      proposals$logA[i] <- logA
+
       if(log(runif(1)) < logA){
         current_theta <- proposed_theta
         current_lafn <- proposed_lafn
@@ -110,6 +118,8 @@ mrfrj <- function(z, llapprox,
           sum(dnorm(current_theta, sd = sdprior, log = TRUE)) +
           sum(dnorm(current_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) +
           logpenalty
+        proposals$logA[i] <- logA
+        proposals$extraInfo[i] <- "delete"
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
           current_lafn <- proposed_lafn
@@ -126,6 +136,8 @@ mrfrj <- function(z, llapprox,
           sum(dnorm(current_theta, sd = sdprior, log = TRUE)) -
           sum(dnorm(proposed_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) -
           logpenalty
+        proposals$logA[i] <- logA
+        proposals$extraInfo[i] <- "add"
 
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
@@ -155,6 +167,7 @@ mrfrj <- function(z, llapprox,
           sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
           current_lafn -
           sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+        proposals$logA[i] <- logA
         if(is.nan(logA)) logA <- -Inf
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
@@ -162,7 +175,7 @@ mrfrj <- function(z, llapprox,
         }
       }
     } else if(move == "swap"){
-      if(sum(included > 1) && sum(included) < length(included)){
+      if(sum(included) > 1 && sum(included) < length(included)){
         to_remove <- sample(which(as.logical(included)), 1)
         to_include <- sample(which(!as.logical(included)), 1)
         proposed_theta <- current_theta
@@ -175,10 +188,13 @@ mrfrj <- function(z, llapprox,
 
         logA <- proposed_lafn -
           current_lafn
+        proposals$logA[i] <- logA
         if(is.nan(logA)) logA <- -Inf
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
           current_lafn <- proposed_lafn
+          included[to_remove] <- FALSE
+          included[to_include] <- TRUE
         }
       }
     }
@@ -205,7 +221,7 @@ mrfrj <- function(z, llapprox,
   ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
   out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE,
-              ptime = ptime)
+              ptime = ptime, proposals = proposals)
   class(out) <- "mrfbayes_out"
   return(out)
 }
