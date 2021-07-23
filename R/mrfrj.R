@@ -24,9 +24,9 @@
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @export
 mrfrj <- function(z, llapprox,
-                  nsamples = 1000, init_theta = "pl",
-                  sdprior = 10, sdkernel = 0.01,
-                  sdjump = 0.1,
+                  nsamples = 1000, init_theta = "zero",
+                  sdprior = 1, sdkernel = 0.005,
+                  sdjump = 0.05,
                   logpenalty = log(prod(dim(z))),
                   verbose = interactive()){
   start_time <- Sys.time()
@@ -70,6 +70,7 @@ mrfrj <- function(z, llapprox,
   } else {
     current_theta <- init_theta
   }
+  current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
   included <- rep(TRUE, length(maximal_mrfi))
@@ -77,19 +78,21 @@ mrfrj <- function(z, llapprox,
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(c("jump", "within", "share"), size = 1)
+    move <- sample(c("jump", "within", "share", "swap"), size = 1)
 
     # Walk within the current model
     if(move == "within"){
       proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)*(current_theta!=0)
+  proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
       # Compute acceptance probability
-      logA <- llapprox@lafn(z_arg, proposed_theta) +
+      logA <- proposed_lafn +
         sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-        llapprox@lafn(z_arg, current_theta) -
+        current_lafn -
         sum(dnorm(current_theta, sd = sdprior, log = TRUE))
       if(log(runif(1)) < logA){
         current_theta <- proposed_theta
+        current_lafn <- proposed_lafn
       }
 
     # Add or delete a position
@@ -99,30 +102,34 @@ mrfrj <- function(z, llapprox,
 
       if(included[jump_pos]){ # Delete the selected position
         proposed_theta <- current_theta * rep(included*(!vec_jump), each = dim_per_group)
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
-        logA <- llapprox@lafn(z_arg, proposed_theta) +
+        logA <- proposed_lafn +
           sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-          llapprox@lafn(z_arg, current_theta) -
+          current_lafn -
           sum(dnorm(current_theta, sd = sdprior, log = TRUE)) +
           sum(dnorm(current_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) +
           logpenalty
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
           included <- included - vec_jump
         }
 
       } else { # Add the selected position
         proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdjump)*rep(vec_jump, each = dim_per_group)
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
-        logA <- llapprox@lafn(z_arg, proposed_theta) +
+        logA <- proposed_lafn +
           sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-          llapprox@lafn(z_arg, current_theta) -
+          current_lafn -
           sum(dnorm(current_theta, sd = sdprior, log = TRUE)) -
           sum(dnorm(proposed_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) -
           logpenalty
 
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
           included <- included + vec_jump
         }
       }
@@ -142,13 +149,36 @@ mrfrj <- function(z, llapprox,
         proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)] <-
          sum2*(1-w)
 
-        logA <- llapprox@lafn(z_arg, proposed_theta) +
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+        logA <- proposed_lafn +
           sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-          llapprox@lafn(z_arg, current_theta) -
+          current_lafn -
           sum(dnorm(current_theta, sd = sdprior, log = TRUE))
         if(is.nan(logA)) logA <- -Inf
         if(log(runif(1)) < logA){
           current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
+        }
+      }
+    } else if(move == "swap"){
+      if(sum(included > 1) && sum(included) < length(included)){
+        to_remove <- sample(which(as.logical(included)), 1)
+        to_include <- sample(which(!as.logical(included)), 1)
+        proposed_theta <- current_theta
+
+        proposed_theta[((to_include - 1)*dim_per_group + 1):(to_include*dim_per_group)] <-
+          proposed_theta[((to_remove - 1)*dim_per_group + 1):(to_remove*dim_per_group)]
+        proposed_theta[((to_remove - 1)*dim_per_group + 1):(to_remove*dim_per_group)] <- 0
+
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+        logA <- proposed_lafn -
+          current_lafn
+        if(is.nan(logA)) logA <- -Inf
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
         }
       }
     }
