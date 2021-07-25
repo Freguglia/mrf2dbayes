@@ -52,7 +52,7 @@ plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
     tmax <- max(x$df$t)
     p <- ggplot(x$df) +
       geom_line(aes(x = .data$t, y = .data$value, color = .data$position)) +
-      geom_rect(data = stts, 
+      geom_rect(data = stts,
                   aes(xmin = 0, xmax = tmax,
                       ymin = .data$q025, ymax = .data$q975,
                       fill = .data$position), alpha = 0.1) +
@@ -62,7 +62,6 @@ plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
     return(p)
   } else {
     df <- x$df
-    df <- df[df$value != 0.0,]
     df <- df %>%
       group_by(.data$position, .data$interaction) %>%
       mutate(dif = c(0, diff(.data$t) - 1)) %>%

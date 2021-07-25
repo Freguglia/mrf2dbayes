@@ -22,6 +22,7 @@
 #' @return An object of class `mrfbayes_out`
 #'
 #' @importFrom mrf2d expand_array smr_stat smr_array
+#' @importFrom dplyr filter
 #' @export
 mrfrj <- function(z, llapprox,
                   nsamples = 1000, init_theta = "zero",
@@ -216,11 +217,13 @@ mrfrj <- function(z, llapprox,
   resdf <- tidyr::pivot_longer(resdf, cols = -"t")
   resdf <- cbind(resdf, mrf2d::vec_description(maximal_mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
+  resdf <- resdf[resdf$value != 0.0,]
+  resdf <- tibble::as_tibble(resdf)
 
   end_time <- Sys.time()
   ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = TRUE,
+  out <- list(df = resdf, ll = llapprox, rj = TRUE,
               ptime = ptime, proposals = proposals)
   class(out) <- "mrfbayes_out"
   return(out)
