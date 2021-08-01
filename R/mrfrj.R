@@ -77,14 +77,14 @@ mrfrj <- function(z, llapprox,
   included <- rep(FALSE, length(maximal_mrfi))
   proposals <- data.frame(t = 1:nsamples,
                           move = factor(character(nsamples),
-                                        levels = c("swap", "within", "jump", "share")),
+                                        levels = c("swap", "within", "jump", "share", "rescale")),
                           logA = numeric(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(c("jump", "within", "share", "swap"), size = 1)
+    move <- sample(c("jump", "within", "share", "swap", "rescale"), size = 1)
     proposals$move[i] <- move
 
     # Walk within the current model
@@ -151,16 +151,45 @@ mrfrj <- function(z, llapprox,
     } else if(move == "share"){
       if(sum(included) > 1){
         # Propose
-        to_share <- sample(which(as.logical(included)), 2, replace = TRUE)
-        w <- runif(1, 1/10, 9/10)
-        if(runif(1) < 1/2) w <- 1/w
-        sum2 <- (current_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)] +
-          current_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)])
+        to_share <- sample(which(as.logical(included)), 2, replace = FALSE)
+        w <- runif(1, 0, 1)
+        norm1 <- sqrt(sum(current_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)]^2))
+        norm2 <- sqrt(sum(current_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)]^2))
+        sum_norms <- norm1 + norm2
         proposed_theta <- current_theta
         proposed_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)] <-
-         sum2*w
+          proposed_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)]/norm1*w*sum_norms
         proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)] <-
-         sum2*(1-w)
+        proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)]/norm2*(1-2)*sum_norms
+
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+        logA <- proposed_lafn +
+          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+          current_lafn -
+          sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+        proposals$logA[i] <- logA
+        if(is.nan(logA)) logA <- -Inf
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
+        }
+      }
+    } else if(move == "rescale"){
+      if(sum(included) > 1){
+        to_rescale <- sample(which(as.logical(included)), 2, replace = FALSE)
+        rescale_interaction <- sample(1:dim_per_group, 1)
+        rescale_factor <- runif(1)
+        if(runif(1) < 1/2){
+          rescale_factor <- 1/rescale_factor
+        }
+        proposed_theta <- current_theta
+        idx1 <- ((to_rescale[1] - 1)*dim_per_group + 1):((to_rescale[1])*dim_per_group)
+        idx1 <- idx1[rescale_interaction]
+        idx2 <- ((to_rescale[2] - 1)*dim_per_group + 1):((to_rescale[2])*dim_per_group)
+        idx2 <- idx2[rescale_interaction]
+        proposed_theta[idx1] <- proposed_theta[idx1]*rescale_factor
+        proposed_theta[idx2] <- proposed_theta[idx2]*rescale_factor
 
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
