@@ -77,14 +77,14 @@ mrfrj <- function(z, llapprox,
   included <- rep(FALSE, length(maximal_mrfi))
   proposals <- data.frame(t = 1:nsamples,
                           move = factor(character(nsamples),
-                                        levels = c("swap", "within", "jump", "share", "rescale")),
+                                        levels = c("swap", "within", "jump", "share", "center")),
                           logA = numeric(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(c("jump", "within", "share", "swap", "rescale"), size = 1)
+    move <- sample(c("jump", "within", "share", "swap", "center"), size = 1)
     proposals$move[i] <- move
 
     # Walk within the current model
@@ -175,21 +175,17 @@ mrfrj <- function(z, llapprox,
           current_lafn <- proposed_lafn
         }
       }
-    } else if(move == "rescale"){
+    } else if(move == "center"){
       if(sum(included) > 1){
-        to_rescale <- sample(which(as.logical(included)), 2, replace = FALSE)
-        rescale_interaction <- sample(1:dim_per_group, 1)
-        rescale_factor <- runif(1)
-        if(runif(1) < 1/2){
-          rescale_factor <- 1/rescale_factor
-        }
+        to_center <- sample(which(as.logical(included)), 2, replace = FALSE)
         proposed_theta <- current_theta
-        idx1 <- ((to_rescale[1] - 1)*dim_per_group + 1):((to_rescale[1])*dim_per_group)
-        idx1 <- idx1[rescale_interaction]
-        idx2 <- ((to_rescale[2] - 1)*dim_per_group + 1):((to_rescale[2])*dim_per_group)
-        idx2 <- idx2[rescale_interaction]
-        proposed_theta[idx1] <- proposed_theta[idx1]*rescale_factor
-        proposed_theta[idx2] <- proposed_theta[idx2]*rescale_factor
+        idx1 <- ((to_center[1] - 1)*dim_per_group + 1):((to_center[1])*dim_per_group)
+        idx2 <- ((to_center[2] - 1)*dim_per_group + 1):((to_center[2])*dim_per_group)
+
+        u <- runif(1, -0.5, 0.5)
+        center_old <- (current_theta[idx1] + current_theta[idx2])/2
+        proposed_theta[idx1] <- center_old + u
+        proposed_theta[idx2] <- center_old - u
 
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
