@@ -27,7 +27,7 @@
 mrfrj <- function(z, llapprox,
                   nsamples = 1000, init_theta = "zero",
                   sdprior = 1, sdkernel = 0.005,
-                  sdjump = 0.05,
+                  sdjump = 0.05, sdcenter = 0.3,
                   logpenalty = log(prod(dim(z))),
                   verbose = interactive()){
   start_time <- Sys.time()
@@ -181,12 +181,13 @@ mrfrj <- function(z, llapprox,
         proposed_theta <- current_theta
         idx1 <- ((to_center[1] - 1)*dim_per_group + 1):((to_center[1])*dim_per_group)
         idx2 <- ((to_center[2] - 1)*dim_per_group + 1):((to_center[2])*dim_per_group)
+        idx_int <- sample(1:d)
+        idx1 <- idx1[idx_int]
+        idx2 <- idx2[idx_int]
 
-        u <- runif(1, -0.5, 0.5)
-        center_old <- (current_theta[idx1] + current_theta[idx2])/2
-        proposed_theta[idx1] <- center_old + u
-        proposed_theta[idx2] <- center_old - u
-
+        u <- rnorm(1, mean = 0, sd = sdcenter)
+        proposed_theta[idx1] <- proposed_theta[idx1] + u
+        proposed_theta[idx2] <- proposed_theta[idx2] - u
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
         logA <- proposed_lafn +
