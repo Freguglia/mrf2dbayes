@@ -181,7 +181,7 @@ mrfrj <- function(z, llapprox,
         proposed_theta <- current_theta
         idx1 <- ((to_center[1] - 1)*dim_per_group + 1):((to_center[1])*dim_per_group)
         idx2 <- ((to_center[2] - 1)*dim_per_group + 1):((to_center[2])*dim_per_group)
-        idx_int <- sample(1:d)
+        idx_int <- sample(1:dim_per_group)
         idx1 <- idx1[idx_int]
         idx2 <- idx2[idx_int]
 
@@ -240,7 +240,7 @@ mrfrj <- function(z, llapprox,
   resdf <- as.data.frame(resmat)
   resdf$t <- 1:nsamples
 
-  resdf <- tidyr::pivot_longer(resdf, cols = -"t")
+  resdf <- tidyr::gather(resdf, "key", "value", -t)
   resdf <- cbind(resdf, mrf2d::vec_description(maximal_mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
   resdf <- resdf[resdf$value != 0.0,]
