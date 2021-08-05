@@ -240,7 +240,8 @@ mrfrj <- function(z, llapprox,
   resdf <- as.data.frame(resmat)
   resdf$t <- 1:nsamples
 
-  resdf <- tidyr::gather(resdf, "key", "value", -t)
+  resdf <- tidyr::gather(resdf, "key", "value", -t) %>%
+    arrange(t)
   resdf <- cbind(resdf, mrf2d::vec_description(maximal_mrfi, family, C))
   resdf <- resdf[,c("t", "position", "interaction", "value")]
   resdf <- resdf[resdf$value != 0.0,]
