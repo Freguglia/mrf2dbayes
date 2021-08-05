@@ -43,10 +43,11 @@ summary.mrfbayes_out <- function(object, burnin = 0.25, ...){
 }
 
 #' @rdname mrfbayes_out
-#' @importFrom ggplot2 ggplot aes geom_line geom_rect theme_bw facet_wrap
-#' @importFrom dplyr %>% mutate group_by arrange
+#' @importFrom ggplot2 ggplot aes geom_line geom_rect theme_bw facet_wrap geom_hline
+#' @importFrom dplyr %>% mutate group_by arrange ungroup
 #' @export
-plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
+plot.mrfbayes_out <- function(x, burnin = 0,
+                              thin = 50, ...){
   if(!x$rj){
     stts <- summary(x, burnin = burnin)
     tmax <- max(x$df$t)
@@ -65,10 +66,13 @@ plot.mrfbayes_out <- function(x, burnin = 0.25, ...){
     df <- df %>%
       group_by(.data$position, .data$interaction) %>%
       mutate(dif = c(0, diff(.data$t) - 1)) %>%
-      mutate(grp = cumsum(.data$dif))
+      mutate(grp = cumsum(.data$dif)) %>%
+      ungroup() %>%
+      filter(t %% thin == 0)
     p <- ggplot(df, aes(x = .data$t, y = .data$value, color = .data$position)) +
       geom_line(aes(group = interaction(.data$grp, .data$position))) +
       theme_bw() +
+      geom_hline(yintercept = 0) +
       facet_wrap(~.data$interaction)
 
     return(p)

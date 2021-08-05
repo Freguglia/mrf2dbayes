@@ -11,7 +11,7 @@
 
 \method{summary}{mrfbayes_out}(object, burnin = 0.25, ...)
 
-\method{plot}{mrfbayes_out}(x, burnin = 0.25, ...)
+\method{plot}{mrfbayes_out}(x, burnin = 0, thin = 50, ...)
 }
 \arguments{
 \item{x}{a \code{mrfbayes_out} object.}
