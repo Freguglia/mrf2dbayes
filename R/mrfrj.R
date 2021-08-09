@@ -75,7 +75,7 @@ mrfrj <- function(z, llapprox,
   current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
-  if(start_empy) {
+  if(start_empty) {
     included <- rep(FALSE, length(maximal_mrfi))
   } else {
     included <- rep(TRUE, length(maximal_mrfi))
