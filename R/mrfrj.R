@@ -29,7 +29,8 @@ mrfrj <- function(z, llapprox,
                   sdprior = 1, sdkernel = 0.005,
                   sdjump = 0.05, sdcenter = 0.3,
                   logpenalty = log(prod(dim(z))),
-                  verbose = interactive()){
+                  verbose = interactive(),
+                  start_empty = TRUE){
   start_time <- Sys.time()
 
   # Initialize meta-parameters and do some checks
@@ -74,7 +75,12 @@ mrfrj <- function(z, llapprox,
   current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
-  included <- rep(FALSE, length(maximal_mrfi))
+  if(start_empy) {
+    included <- rep(FALSE, length(maximal_mrfi))
+  } else {
+    included <- rep(TRUE, length(maximal_mrfi))
+  }
+
   proposals <- data.frame(t = 1:nsamples,
                           move = factor(character(nsamples),
                                         levels = c("swap", "within", "jump", "share", "center")),

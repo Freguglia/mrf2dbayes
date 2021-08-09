@@ -14,7 +14,8 @@ mrfrj(
   sdjump = 0.05,
   sdcenter = 0.3,
   logpenalty = log(prod(dim(z))),
-  verbose = interactive()
+  verbose = interactive(),
+  start_empty = TRUE
 )
 }
 \arguments{
