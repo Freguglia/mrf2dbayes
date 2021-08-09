@@ -155,6 +155,7 @@ mrfrj <- function(z, llapprox,
 
     # Share weights of a particular interaction between two positions
     } else if(move == "share"){
+      logA <- -Inf
       if(sum(included) > 1){
         # Propose
         to_share <- sample(which(as.logical(included)), 2, replace = FALSE)
@@ -182,6 +183,7 @@ mrfrj <- function(z, llapprox,
         }
       }
     } else if(move == "center"){
+      logA <- -Inf
       if(sum(included) > 1){
         to_center <- sample(which(as.logical(included)), 2, replace = FALSE)
         proposed_theta <- current_theta
