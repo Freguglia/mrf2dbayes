@@ -185,7 +185,7 @@ mrfrj <- function(z, llapprox,
         idx1 <- idx1[idx_int]
         idx2 <- idx2[idx_int]
 
-        u <- rnorm(1, mean = 0, sd = sdcenter)
+        u <- rnorm(dim_per_group, mean = 0, sd = sdcenter)
         proposed_theta[idx1] <- proposed_theta[idx1] + u
         proposed_theta[idx2] <- proposed_theta[idx2] - u
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
