@@ -27,7 +27,7 @@
 mrfrj <- function(z, llapprox,
                   nsamples = 1000, init_theta = "zero",
                   sdprior = 1, sdkernel = 0.005,
-                  sdjump = 0.05, sdcenter = 0.3,
+                  sdbirth = 0.05,
                   logpenalty = log(prod(dim(z))),
                   verbose = interactive(),
                   start_empty = TRUE){
@@ -54,7 +54,6 @@ mrfrj <- function(z, llapprox,
   }
 
   # Initialize values
-  ## Start in the maximal model
   if(is.character(init_theta)){
     if(init_theta == "zero"){
       current_theta <- rnorm(length(T_zobs), mean = 0, sd = 0.01)*0
@@ -81,28 +80,34 @@ mrfrj <- function(z, llapprox,
     included <- rep(TRUE, length(maximal_mrfi))
   }
 
+  move_list <- c("within",
+                 "swap",
+                 "death",
+                 "birth",
+                 "jump"
+                 )
+
   proposals <- data.frame(t = 1:nsamples,
                           move = factor(character(nsamples),
-                                        levels = c("swap", "within", "jump", "share", "center")),
+                                        levels = move_list),
                           logA = numeric(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(c("jump", "within", "share", "swap", "center"), size = 1)
+    move <- sample(move_list, size = 1)
     proposals$move[i] <- move
 
-    # Walk within the current model
+    # Random walk proposal within the current model
     if(move == "within"){
       proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)*(current_theta!=0)
   proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
-      # Compute acceptance probability
       logA <- proposed_lafn +
-        sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+        sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
         current_lafn -
-        sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+        sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE))
       proposals$logA[i] <- logA
 
       if(log(runif(1)) < logA){
@@ -111,103 +116,76 @@ mrfrj <- function(z, llapprox,
       }
 
     # Add or delete a position
-    } else if(move == "jump"){
-      jump_pos <- sample(seq_len(npos), size = 1)
-      vec_jump <- seq_len(npos) == jump_pos
+    } else if(move == "birth"){
+      if(sum(included) < npos){
+        pos_to_add <- sample(which(!included), size = 1)
+        theta_to_add <- rnorm(dim_per_group, mean = 0, sd = sdbirth)
 
-      if(included[jump_pos]){ # Delete the selected position
-        proposed_theta <- current_theta * rep(included*(!vec_jump), each = dim_per_group)
-        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
-
-        logA <- proposed_lafn +
-          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-          current_lafn -
-          sum(dnorm(current_theta, sd = sdprior, log = TRUE)) +
-          sum(dnorm(current_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) +
-          logpenalty
-        proposals$logA[i] <- logA
-        proposals$extraInfo[i] <- "delete"
-        if(log(runif(1)) < logA){
-          current_theta <- proposed_theta
-          current_lafn <- proposed_lafn
-          included <- included - vec_jump
-        }
-
-      } else { # Add the selected position
-        proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdjump)*rep(vec_jump, each = dim_per_group)
-        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
-
-        logA <- proposed_lafn +
-          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
-          current_lafn -
-          sum(dnorm(current_theta, sd = sdprior, log = TRUE)) -
-          sum(dnorm(proposed_theta[rep(vec_jump, each = dim_per_group)], sd = sdjump, log = TRUE)) -
-          logpenalty
-        proposals$logA[i] <- logA
-        proposals$extraInfo[i] <- "add"
-
-        if(log(runif(1)) < logA){
-          current_theta <- proposed_theta
-          current_lafn <- proposed_lafn
-          included <- included + vec_jump
-        }
-      }
-
-    # Share weights of a particular interaction between two positions
-    } else if(move == "share"){
-      logA <- -Inf
-      if(sum(included) > 1){
-        # Propose
-        to_share <- sample(which(as.logical(included)), 2, replace = FALSE)
-        w <- runif(1, 0, 1)
-        norm1 <- sqrt(sum(current_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)]^2))
-        norm2 <- sqrt(sum(current_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)]^2))
-        sum_norms <- norm1 + norm2
         proposed_theta <- current_theta
-        proposed_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)] <-
-          proposed_theta[((to_share[1] - 1)*dim_per_group + 1):((to_share[1])*dim_per_group)]/norm1*w*sum_norms
-        proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)] <-
-        proposed_theta[((to_share[2] - 1)*dim_per_group + 1):((to_share[2])*dim_per_group)]/norm2*(1-2)*sum_norms
+        proposed_theta[((pos_to_add-1)*dim_per_group + 1):(pos_to_add*dim_per_group)] <- theta_to_add
+
+        if(sum(included) > 0){
+          wts <- rgamma(sum(included), shape = 1/10)
+          wts <- wts/sum(wts)
+          mult <- rep(included, each = dim_per_group)
+          mult[mult] <- mult[mult]*rep(wts, each = dim_per_group)
+          proposed_theta <- proposed_theta - theta_to_add*mult
+        }
 
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
         logA <- proposed_lafn +
-          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+          sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
           current_lafn -
-          sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+          sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE)) -
+          logpenalty #-
+          #sum(dnorm(theta_to_add, sd = sdbirth, log = TRUE))
         proposals$logA[i] <- logA
-        if(is.nan(logA)) logA <- -Inf
-        if(log(runif(1)) < logA){
+
+        if(log(runif(1)) < logA) {
           current_theta <- proposed_theta
+          included[pos_to_add] <- TRUE
           current_lafn <- proposed_lafn
         }
+      } else { # Could not add more positions, full model
+        logA <- -Inf
+        proposals$logA[i] <- logA
       }
-    } else if(move == "center"){
-      logA <- -Inf
-      if(sum(included) > 1){
-        to_center <- sample(which(as.logical(included)), 2, replace = FALSE)
-        proposed_theta <- current_theta
-        idx1 <- ((to_center[1] - 1)*dim_per_group + 1):((to_center[1])*dim_per_group)
-        idx2 <- ((to_center[2] - 1)*dim_per_group + 1):((to_center[2])*dim_per_group)
-        idx_int <- sample(1:dim_per_group)
-        idx1 <- idx1[idx_int]
-        idx2 <- idx2[idx_int]
+    } else if(move == "death"){
+      if(sum(included) > 0){
+        pos_to_remove <- sample(which(included), size = 1)
+        theta_to_remove <- current_theta[((pos_to_remove-1)*dim_per_group + 1):(pos_to_remove*dim_per_group)]
+        remaining <- included - (seq_len(npos) == pos_to_remove)
 
-        u <- rnorm(dim_per_group, mean = 0, sd = sdcenter)
-        proposed_theta[idx1] <- proposed_theta[idx1] + u
-        proposed_theta[idx2] <- proposed_theta[idx2] - u
+        proposed_theta <- current_theta
+        proposed_theta[((pos_to_remove-1)*dim_per_group + 1):(pos_to_remove*dim_per_group)] <- 0
+
+        if(sum(remaining) > 0){
+          wts <- rgamma(sum(remaining), shape = 1/10)
+          wts <- wts/sum(wts)
+          mult <- rep(remaining, each = dim_per_group)
+          mult[mult] <- mult[mult]*rep(wts, each = dim_per_group)
+          proposed_theta <- proposed_theta + theta_to_remove*mult
+        }
+
         proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
 
         logA <- proposed_lafn +
-          sum(dnorm(proposed_theta, sd = sdprior, log = TRUE)) -
+          sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
           current_lafn -
-          sum(dnorm(current_theta, sd = sdprior, log = TRUE))
+          sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE)) +
+          logpenalty #+
+          #sum(dnorm(theta_to_remove, sd = sdbirth, log = TRUE))
         proposals$logA[i] <- logA
-        if(is.nan(logA)) logA <- -Inf
-        if(log(runif(1)) < logA){
+
+        if(log(runif(1)) < logA) {
           current_theta <- proposed_theta
+          included[pos_to_remove] <- FALSE
           current_lafn <- proposed_lafn
         }
+      } else {
+        logA <- -Inf
+        proposals$logA[i] <- logA
       }
     } else if(move == "swap"){
       if(sum(included) > 1 && sum(included) < length(included)){
@@ -230,6 +208,51 @@ mrfrj <- function(z, llapprox,
           current_lafn <- proposed_lafn
           included[to_remove] <- FALSE
           included[to_include] <- TRUE
+        }
+      } else {
+        logA <- -Inf
+        proposals$logA[i] <- logA
+      }
+      # Add or delete a position
+    } else if(move == "jump"){
+      jump_pos <- sample(seq_len(npos), size = 1)
+      vec_jump <- seq_len(npos) == jump_pos
+
+      if(included[jump_pos]){ # Delete the selected position
+        proposed_theta <- current_theta * rep(included*(!vec_jump), each = dim_per_group)
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+        logA <- proposed_lafn +
+          sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
+          current_lafn -
+          sum(dnorm(current_theta[current_theta != 0], sd = sdprior, log = TRUE)) +
+          sum(dnorm(current_theta[rep(vec_jump, each = dim_per_group)], sd = sdbirth, log = TRUE)) +
+          logpenalty
+        proposals$logA[i] <- logA
+        proposals$extraInfo[i] <- "delete"
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
+          included <- as.logical(included - vec_jump)
+        }
+
+      } else { # Add the selected position
+        proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdbirth)*rep(vec_jump, each = dim_per_group)
+        proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+        logA <- proposed_lafn +
+          sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
+          current_lafn -
+          sum(dnorm(current_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
+          sum(dnorm(proposed_theta[rep(vec_jump, each = dim_per_group)], sd = sdbirth, log = TRUE)) -
+          logpenalty
+        proposals$logA[i] <- logA
+        proposals$extraInfo[i] <- "add"
+
+        if(log(runif(1)) < logA){
+          current_theta <- proposed_theta
+          current_lafn <- proposed_lafn
+          included <- as.logical(included + vec_jump)
         }
       }
     }

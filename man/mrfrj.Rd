@@ -11,8 +11,7 @@ mrfrj(
   init_theta = "zero",
   sdprior = 1,
   sdkernel = 0.005,
-  sdjump = 0.05,
-  sdcenter = 0.3,
+  sdbirth = 0.05,
   logpenalty = log(prod(dim(z))),
   verbose = interactive(),
   start_empty = TRUE
