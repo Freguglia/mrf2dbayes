@@ -13,7 +13,7 @@ mrfrj(
   sdprior = 1,
   sdkernel = 0.005,
   sdbirth = 0.05,
-  kernel_probs = c(2, 1, 1, 1, 1),
+  kernel_probs = c(4, 1, 1, 1, 1),
   logpenalty = log(prod(dim(z))),
   verbose = interactive()
 )

@@ -29,7 +29,7 @@ mrfrj <- function(z, llapprox,
                   init_included = "zero",
                   sdprior = 1, sdkernel = 0.005,
                   sdbirth = 0.05,
-                  kernel_probs = c(2,1,1,1,1),
+                  kernel_probs = c(4,1,1,1,1),
                   logpenalty = log(prod(dim(z))),
                   verbose = interactive()){
   start_time <- Sys.time()
@@ -109,7 +109,7 @@ mrfrj <- function(z, llapprox,
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(move_list, size = 1, prob = c(4,1,1,1,1))
+    move <- sample(move_list, size = 1, prob = kernel_probs)
     proposals$move[i] <- move
     proposals$modelcode[i] <- encode_mrfi(included)
 
@@ -152,8 +152,10 @@ mrfrj <- function(z, llapprox,
           sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
           current_lafn -
           sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE)) -
-          logpenalty #-
-          #sum(dnorm(theta_to_add, sd = sdbirth, log = TRUE))
+          logpenalty -
+          sum(dnorm(theta_to_add, sd = sdbirth, log = TRUE)) +
+          log(kernel_probs[3] * 1/(sum(included) + 1)) -
+          log(kernel_probs[4] * 1/(npos-sum(included)))
         proposals$logA[i] <- logA
 
         if(log(runif(1)) < logA) {
@@ -188,8 +190,10 @@ mrfrj <- function(z, llapprox,
           sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
           current_lafn -
           sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE)) +
-          logpenalty #+
-          #sum(dnorm(theta_to_remove, sd = sdbirth, log = TRUE))
+          logpenalty +
+          sum(dnorm(theta_to_remove, sd = sdbirth, log = TRUE)) +
+          log(kernel_probs[4] * 1/(npos-sum(included)+1)) -
+          log(kernel_probs[3] * 1/sum(included))
         proposals$logA[i] <- logA
 
         if(log(runif(1)) < logA) {
