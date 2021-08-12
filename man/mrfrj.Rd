@@ -9,12 +9,13 @@ mrfrj(
   llapprox,
   nsamples = 1000,
   init_theta = "zero",
+  init_included = "zero",
   sdprior = 1,
   sdkernel = 0.005,
   sdbirth = 0.05,
+  kernel_probs = c(2, 1, 1, 1, 1),
   logpenalty = log(prod(dim(z))),
-  verbose = interactive(),
-  start_empty = TRUE
+  verbose = interactive()
 )
 }
 \arguments{

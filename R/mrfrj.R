@@ -26,11 +26,12 @@
 #' @export
 mrfrj <- function(z, llapprox,
                   nsamples = 1000, init_theta = "zero",
+                  init_included = "zero",
                   sdprior = 1, sdkernel = 0.005,
                   sdbirth = 0.05,
+                  kernel_probs = c(2,1,1,1,1),
                   logpenalty = log(prod(dim(z))),
-                  verbose = interactive(),
-                  start_empty = TRUE){
+                  verbose = interactive()){
   start_time <- Sys.time()
 
   # Initialize meta-parameters and do some checks
@@ -54,9 +55,25 @@ mrfrj <- function(z, llapprox,
   }
 
   # Initialize values
+  if(is.character(init_included)){
+    if(init_included == "zero"){
+      included <- rep(FALSE, length(maximal_mrfi))
+    } else if (init_included == "full"){
+      included <- rep(TRUE, length(maximal_mrfi))
+    } else {
+      stop("Invalid 'init_included'.")
+    }
+  } else {
+    if(length(init_included) == length(maximal_mrfi)){
+      included <- init_included
+    } else {
+      stop("'init_included' must have the same length as the maximal mrfi.")
+    }
+  }
+
   if(is.character(init_theta)){
     if(init_theta == "zero"){
-      current_theta <- rnorm(length(T_zobs), mean = 0, sd = 0.01)*0
+      current_theta <- rnorm(length(T_zobs), mean = 0, sd = sdkernel)*rep(included, each = dim_per_group)
     } else if(init_theta == "pl") {
       if(!is.null(llapprox@internal_data$mple)){
         current_theta <- llapprox@internal_data$mple
@@ -74,11 +91,6 @@ mrfrj <- function(z, llapprox,
   current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
-  if(start_empty) {
-    included <- rep(FALSE, length(maximal_mrfi))
-  } else {
-    included <- rep(TRUE, length(maximal_mrfi))
-  }
 
   move_list <- c("within",
                  "swap",
@@ -91,13 +103,15 @@ mrfrj <- function(z, llapprox,
                           move = factor(character(nsamples),
                                         levels = move_list),
                           logA = numeric(nsamples),
+                          modelcode = character(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
   for(i in 1:nsamples){
     # Propose move
-    move <- sample(move_list, size = 1)
+    move <- sample(move_list, size = 1, prob = c(4,1,1,1,1))
     proposals$move[i] <- move
+    proposals$modelcode[i] <- encode_mrfi(included)
 
     # Random walk proposal within the current model
     if(move == "within"){
@@ -282,7 +296,8 @@ mrfrj <- function(z, llapprox,
   ptime <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
   out <- list(df = resdf, ll = llapprox, rj = TRUE,
-              ptime = ptime, proposals = proposals)
+              ptime = ptime, proposals = proposals,
+              last_included = included, last_theta = current_theta)
   class(out) <- "mrfbayes_out"
   return(out)
 }
