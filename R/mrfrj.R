@@ -103,7 +103,7 @@ mrfrj <- function(z, llapprox,
                           move = factor(character(nsamples),
                                         levels = move_list),
                           logA = numeric(nsamples),
-                          modelcode = character(nsamples),
+                         # modelcode = character(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
@@ -111,7 +111,7 @@ mrfrj <- function(z, llapprox,
     # Propose move
     move <- sample(move_list, size = 1, prob = kernel_probs)
     proposals$move[i] <- move
-    proposals$modelcode[i] <- encode_mrfi(included)
+   # proposals$modelcode[i] <- encode_mrfi(included)
 
     # Random walk proposal within the current model
     if(move == "within"){
