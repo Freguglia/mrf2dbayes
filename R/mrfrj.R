@@ -103,6 +103,7 @@ mrfrj <- function(z, llapprox,
                           move = factor(character(nsamples),
                                         levels = move_list),
                           logA = numeric(nsamples),
+                          logPP = numeric(nsamples),
                          # modelcode = character(nsamples),
                           extraInfo = character(nsamples))
 
@@ -274,9 +275,11 @@ mrfrj <- function(z, llapprox,
         }
       }
     }
-
+    
     # Store results
     resmat[i,] <- current_theta
+    proposals$logPP[i] <- current_lafn +
+      sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE)) 
 
     if(verbose){
       cat("\r", i)
