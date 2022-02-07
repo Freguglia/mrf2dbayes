@@ -90,7 +90,7 @@ mrfbayes <- function(z, llapprox,
 
   end_time <- Sys.time()
 
-  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = FALSE, 
+  out <- list(df = tibble::as_tibble(resdf), ll = llapprox, rj = FALSE,
               ptime = as.numeric(difftime(end_time, start_time, units = "secs")))
   class(out) <- "mrfbayes_out"
   return(out)

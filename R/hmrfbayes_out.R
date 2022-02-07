@@ -8,7 +8,7 @@ plot.hmrfbayes_out <- function(x, what = "pars", burnin = 0.25, ...){
     df <- tidyr::pivot_longer(x$dfpars, cols = as.character(0:C),
                               names_to = "k")
     p <- ggplot(df, aes(x = t, y = value, color = k)) +
-      geom_line() + 
+      geom_line() +
       facet_wrap(~par, scales = "free") +
       theme_bw()
   } else if(what == "theta"){
