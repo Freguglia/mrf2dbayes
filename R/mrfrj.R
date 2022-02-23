@@ -22,7 +22,7 @@
 #' @return An object of class `mrfbayes_out`
 #'
 #' @importFrom mrf2d expand_array smr_stat smr_array
-#' @importFrom dplyr filter
+#' @importFrom dplyr filter unite pull
 #' @import data.table
 #' @export
 mrfrj <- function(z, llapprox,
