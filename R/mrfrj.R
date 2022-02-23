@@ -23,6 +23,7 @@
 #'
 #' @importFrom mrf2d expand_array smr_stat smr_array
 #' @importFrom dplyr filter
+#' @import data.table
 #' @export
 mrfrj <- function(z, llapprox,
                   nsamples = 1000, init_theta = "zero",
@@ -288,15 +289,21 @@ mrfrj <- function(z, llapprox,
   if(verbose){
     cat("\n")
   }
+  gc()
 
-  resdf <- as.data.frame(resmat)
-  resdf$t <- 1:nsamples
+  colnames(resmat) <- mrf2d::vec_description(maximal_mrfi, family, C) %>%
+    unite(name, position, interaction) %>%
+    pull(name)
 
-  resdf <- tidyr::gather(resdf, "key", "value", -t) %>%
-    arrange(t)
-  resdf <- cbind(resdf, mrf2d::vec_description(maximal_mrfi, family, C))
-  resdf <- resdf[,c("t", "position", "interaction", "value")]
-  resdf <- resdf[resdf$value != 0.0,]
+  resdf <- as.data.table(resmat)
+  rm(resmat)
+  resdf[,t:=1:nsamples]
+  gc()
+  resdf <- data.table::melt(as.data.table(resdf), id.vars = "t")[
+    order(t)][
+      value != 0][
+        , c("position", "interaction") := tstrsplit(variable, "_", fixed=TRUE)][,variable:=NULL]
+  gc()
   resdf <- tibble::as_tibble(resdf)
 
   end_time <- Sys.time()

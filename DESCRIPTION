@@ -25,7 +25,8 @@ Imports:
     ggplot2,
     glue,
     rlang,
-    purrr
+    purrr,
+    data.table
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp, 
            RcppArmadillo
