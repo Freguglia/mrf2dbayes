@@ -10,7 +10,12 @@
 #' @param nsamples Number of MCMC samples.
 #' @param nbatch Number of samples from the prior distribution in each
 #' update of the acceptance ratios.
+#' @param first_batch Number of samples from the prior distribution
+#' computed in the first visit to an interaction structure.
 #' @param sdprior Sample Deviation of the Normal distributions used as prior.
+#' @param init_mrfi Initial `mrfi` configuration.
+#' @param verbose `logical` value indicating whether to show the current
+#' iteration.
 #'
 #' @return An object of class `grw_out`
 #' @importFrom mrf2d mrfi_to_string

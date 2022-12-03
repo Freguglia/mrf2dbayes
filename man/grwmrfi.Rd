@@ -26,7 +26,15 @@ structure.}
 \item{nbatch}{Number of samples from the prior distribution in each
 update of the acceptance ratios.}
 
+\item{first_batch}{Number of samples from the prior distribution
+computed in the first visit to an interaction structure.}
+
 \item{sdprior}{Sample Deviation of the Normal distributions used as prior.}
+
+\item{init_mrfi}{Initial \code{mrfi} configuration.}
+
+\item{verbose}{\code{logical} value indicating whether to show the current
+iteration.}
 }
 \value{
 An object of class \code{grw_out}
