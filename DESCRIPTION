@@ -2,18 +2,18 @@ Package: mrf2dbayes
 Type: Package
 Title: Bayesian Analysis of Markov Random Fields on 2d Lattices
 Version: 0.1.0
-Authors@R: 
+Authors@R:
     person("Victor", "Freguglia", email = "victorfreguglia@gmail.com",
-             role = c("aut", "cre"), 
+             role = c("aut", "cre"),
              comment = c(ORCID = "0000-0002-6189-4453"))
 Maintainer: Victor Freguglia <victorfreguglia@gmail.com>
 Description: An extension of the mrf2d package for Bayesian analysis
-  of Markov Random Field models on 2d lattices and general pairwise 
+  of Markov Random Field models on 2d lattices and general pairwise
   interaction structures.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Imports: 
+Imports:
     mrf2d,
     Rcpp,
     dplyr (>= 0.8.1),
@@ -28,14 +28,13 @@ Imports:
     purrr,
     data.table
 Depends: R (>= 3.5.0)
-LinkingTo: Rcpp, 
+LinkingTo: Rcpp,
            RcppArmadillo
 Roxygen: list(markdown = TRUE)
 RdMacros: Rdpack
-RoxygenNote: 7.2.1
-Suggests: 
+RoxygenNote: 7.2.2
+Suggests:
     testthat (>= 2.1.0),
-    covr,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
