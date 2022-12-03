@@ -14,7 +14,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 The goal of `mrf2dbayes` is to provide out-of-the-box implementations of
 Bayesian inference algorithms for Markov Random Fields on 2-dimensional
 lattices with pairwise interactions. It can be viewed as a Bayesian
-extension of the [`mrf2d`](https://github.com/Freguglia/mrf2k) package.
+extension of the [`mrf2d`](https://github.com/Freguglia/mrf2d) package.
 
 ## Installation
 
@@ -91,10 +91,10 @@ plot(metrop)
 
 ``` r
 summary(metrop)
-#> # A tibble: 2 x 6
+#> # A tibble: 2 × 6
 #> # Groups:   position [2]
 #>   position interaction   q025   mean   q975     sd
-#>   <chr>    <chr>        <dbl>  <dbl>  <dbl>  <dbl>
+#>   <fct>    <fct>        <dbl>  <dbl>  <dbl>  <dbl>
 #> 1 (0,1)    different   -1.05  -1.02  -0.987 0.0153
 #> 2 (1,0)    different   -0.993 -0.963 -0.934 0.0151
 ```
