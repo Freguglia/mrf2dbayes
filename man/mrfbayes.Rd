@@ -17,7 +17,8 @@ mrfbayes(
 \arguments{
 \item{z}{The observed random field.}
 
-\item{llapprox}{The likelihood approximation to be used.}
+\item{llapprox}{A \code{llapprox} object based on the maximal interaction
+structure.}
 
 \item{nsamples}{Number of MCMC samples.}
 
@@ -31,8 +32,8 @@ value.}
 \item{sdkernel}{Sample Deviation of the Normal distributions of the
 transition kernel.}
 
-\item{verbose}{\code{logical} value indicating wheter the algorithm progress
-should be printed.}
+\item{verbose}{\code{logical} indicating whether the iteration number is printed
+during execution.}
 }
 \value{
 An object of class \code{mrfbayes_out}

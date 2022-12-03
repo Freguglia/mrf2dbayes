@@ -4,9 +4,6 @@
 #' @description Metropolis-Hastings algorithm over the space of interaction
 #' structures to be used as a Bayesian model selection tool.
 #'
-#' @param llapprox A `llapprox` object based on the maximal interaction
-#' structure.
-#' @param z The observed random field.
 #' @param nsamples Number of MCMC samples.
 #' @param nbatch Number of samples from the prior distribution in each
 #' update of the acceptance ratios.
@@ -14,8 +11,7 @@
 #' computed in the first visit to an interaction structure.
 #' @param sdprior Sample Deviation of the Normal distributions used as prior.
 #' @param init_mrfi Initial `mrfi` configuration.
-#' @param verbose `logical` value indicating whether to show the current
-#' iteration.
+#' @inheritParams mrfbayes
 #'
 #' @return An object of class `grw_out`
 #' @importFrom mrf2d mrfi_to_string

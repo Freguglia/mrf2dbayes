@@ -24,12 +24,20 @@ hmrfbayes(
 \method{plot}{hmrfbayes_out}(x, what = "pars", burnin = 0.25, ...)
 }
 \arguments{
-\item{what}{Either \code{"pars"}, \code{"theta"} or \code{"zprobs"}.}
+\item{y}{An observed continuous-valued \verb{numeric matrix} of values.}
 
-\item{An}{observed continuous-valued \verb{numeric matrix} of values.}
+\item{llapprox}{A \code{llapprox} object based on the maximal interaction
+structure.}
+
+\item{nsamples}{Number of MCMC samples.}
+
+\item{verbose}{\code{logical} indicating whether the iteration number is printed
+during execution.}
+
+\item{what}{Either \code{"pars"}, \code{"theta"} or \code{"zprobs"}.}
 }
 \value{
-A \code{list} with ...
+A \code{hmrfbayes_out} object
 }
 \description{
 Hidden MRF Bayesian MCMC sampling

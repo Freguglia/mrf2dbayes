@@ -1,8 +1,10 @@
 #' @title Hidden MRF Bayesian MCMC sampling
 #' @name hmrfbayes
-#' @param An observed continuous-valued `numeric matrix` of values.
 #'
-#' @return A `list` with ...
+#' @param y An observed continuous-valued `numeric matrix` of values.
+#' @inheritParams mrfbayes
+#'
+#' @return A `hmrfbayes_out` object
 #' @importFrom stats rgamma
 #' @export
 hmrfbayes <- function(y, llapprox, nsamples = 1000,

@@ -33,8 +33,8 @@ computed in the first visit to an interaction structure.}
 
 \item{init_mrfi}{Initial \code{mrfi} configuration.}
 
-\item{verbose}{\code{logical} value indicating whether to show the current
-iteration.}
+\item{verbose}{\code{logical} indicating whether the iteration number is printed
+during execution.}
 }
 \value{
 An object of class \code{grw_out}

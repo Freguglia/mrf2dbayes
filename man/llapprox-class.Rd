@@ -28,8 +28,8 @@ approximation.
 \item \code{"wanglandau"} for the Wang-Landau algorithm.
 }}
 
-\item{verbose}{\code{logical} value indicating wheter the algorithm progress
-should be printed.}
+\item{verbose}{\code{logical} indicating whether the iteration number is printed
+during execution.}
 
 \item{...}{Extra options passed depending on the method used.
 \itemize{

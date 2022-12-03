@@ -72,8 +72,8 @@ setMethod("show", "llapprox",
 #'     parameter vector.
 #'     * `cycles`: Number of cycles in between samples. Defaults to 2.
 #'     * `h`: Bandwidth to be used in the smoother function. Defaults to 10.
-#' @param verbose `logical` value indicating wheter the algorithm progress
-#'   should be printed.
+#' @param verbose `logical` indicating whether the iteration number is printed
+#' during execution.
 #'
 #'
 #'

@@ -20,7 +20,11 @@
 
 \item{object}{a \code{mrfbayes_out} object.}
 
-\item{burnin}{number of (first) observations to exclude from calculations and plots.}
+\item{burnin}{number of (first) observations to exclude from calculations
+and plots.}
+
+\item{thin}{Subsets indexes used in the plot by picking the first of each
+\code{thin} values.}
 }
 \description{
 Output class of mrfbayes

@@ -3,7 +3,10 @@
 #'
 #' @param x a `mrfbayes_out` object.
 #' @param object a `mrfbayes_out` object.
-#' @param burnin number of (first) observations to exclude from calculations and plots.
+#' @param burnin number of (first) observations to exclude from calculations
+#' and plots.
+#' @param thin Subsets indexes used in the plot by picking the first of each
+#' `thin` values.
 #' @param ... other arguments (not used by this method).
 #'
 #' @importFrom glue glue

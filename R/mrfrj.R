@@ -6,11 +6,6 @@
 #' (zero equality) to be visitted, providing a model selection framework along
 #' with the Bayesian solution for inference within models.
 #'
-#' @param llapprox A `llapprox` object based on the maximal interaction
-#' structure.
-#' @param z The observed random field.
-#' @param llapprox The likelihood approximation to be used.
-#' @param nsamples Number of MCMC samples.
 #' @param init_theta Initial values of the MCMC algorithm. Set to "zero" to
 #'   automatically create a vector equal to zero with appropriate length or
 #'   "pl" to use the Maximum Pseudolikelihood estimator of `z` as the initial
@@ -18,6 +13,7 @@
 #' @param sdprior Sample Deviation of the Normal distributions used as prior.
 #' @param sdkernel Sample Deviation of the Normal distributions of the
 #'   transition kernel.
+#' @inheritParams mrfbayes
 #'
 #' @return An object of class `mrfbayes_out`
 #'

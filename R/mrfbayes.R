@@ -3,7 +3,8 @@
 #'
 #' @inheritParams llapprox
 #' @param z The observed random field.
-#' @param llapprox The likelihood approximation to be used.
+#' @param llapprox A `llapprox` object based on the maximal interaction
+#' structure.
 #' @param nsamples Number of MCMC samples.
 #' @param init_theta Initial values of the MCMC algorithm. Set to "zero" to
 #'   automatically create a vector equal to zero with appropriate length or
