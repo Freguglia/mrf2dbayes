@@ -17,6 +17,7 @@
 #' @slot internal_data Internal data to be used by the approximating function.
 #' @slot ptime Time (in seconds) used to compute the approximation.
 #'
+#' @importFrom stats optim
 #' @importFrom glue glue
 #' @exportClass llapprox
 setClass("llapprox",
