@@ -19,7 +19,6 @@ Imports:
     dplyr (>= 0.8.1),
     tidyr,
     methods,
-    Rdpack,
     tibble,
     Brobdingnag,
     ggplot2,
