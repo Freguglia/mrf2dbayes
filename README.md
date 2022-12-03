@@ -8,7 +8,7 @@
 [![R build
 status](https://github.com/Freguglia/mrf2dbayes/workflows/R-CMD-check/badge.svg)](https://github.com/Freguglia/mrf2dbayes/actions)
 [![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
 The goal of `mrf2dbayes` is to provide out-of-the-box implementations of
