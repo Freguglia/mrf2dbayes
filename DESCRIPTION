@@ -34,10 +34,11 @@ Roxygen: list(markdown = TRUE)
 RdMacros: Rdpack
 RoxygenNote: 7.2.1
 Suggests: 
-    testthat (>= 2.1.0),
+    testthat (>= 3.0.0),
     covr,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
 URL: https://github.com/Freguglia/mrf2dbayes
 BugReports: https://github.com/Freguglia/mrf2dbayes/issues
+Config/testthat/edition: 3

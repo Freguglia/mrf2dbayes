@@ -73,23 +73,9 @@ mrfrj <- function(z, llapprox,
     }
   }
 
-  if(is.character(init_theta)){
-    if(init_theta == "zero"){
-      current_theta <- rnorm(length(T_zobs), mean = 0, sd = sdkernel)*rep(included, each = dim_per_group)
-    } else if(init_theta == "pl") {
-      if(!is.null(llapprox@internal_data$mple)){
-        current_theta <- llapprox@internal_data$mple
-      } else {
-        current_theta <- mrf2d::fit_pl(z, maximal_mrfi, family)$theta
-        current_theta <- mrf2d::smr_array(current_theta, family)
-      }
-    }
-  } else if(is.array(init_theta)){
-    current_theta <- init_theta
-    current_theta <- mrf2d::smr_array(current_theta, family)
-  } else {
-    current_theta <- init_theta
-  }
+  current_theta <- mrfrj_init_theta(init_theta, T_zobs, sdkernel,
+                                    included, dim_per_group, llapprox,
+                                    maximal_mrfi, family)
   current_lafn <- llapprox@lafn(z_arg, current_theta)
 
   resmat <- matrix(0, nrow = nsamples, ncol = fdim)
@@ -106,7 +92,6 @@ mrfrj <- function(z, llapprox,
                                         levels = move_list),
                           logA = numeric(nsamples),
                           logPP = numeric(nsamples),
-                         # modelcode = character(nsamples),
                           extraInfo = character(nsamples))
 
   # Run MCMC
@@ -114,23 +99,14 @@ mrfrj <- function(z, llapprox,
     # Propose move
     move <- sample(move_list, size = 1, prob = kernel_probs)
     proposals$move[i] <- move
-   # proposals$modelcode[i] <- encode_mrfi(included)
 
     # Random walk proposal within the current model
     if(move == "within"){
-      proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)*(current_theta!=0)
-  proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
-
-      logA <- proposed_lafn +
-        sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
-        current_lafn -
-        sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE))
-      proposals$logA[i] <- logA
-
-      if(log(runif(1)) < logA){
-        current_theta <- proposed_theta
-        current_lafn <- proposed_lafn
-      }
+      proposal <- mrfrj_step_within(current_theta, current_lafn, z_arg,
+                                    fdim, sdkernel, sdprior, llapprox)
+      proposals$logA[i] <- proposal$logA
+      current_theta <- proposal$theta
+      current_lafn <- proposal$lafn
 
     # Add or delete a position
     } else if(move == "birth"){
@@ -315,4 +291,51 @@ mrfrj <- function(z, llapprox,
               last_included = included, last_theta = current_theta)
   class(out) <- "mrfbayes_out"
   return(out)
+}
+
+mrfrj_init_theta <- function(init_theta,
+                             T_zobs,
+                             sdkernel,
+                             included,
+                             dim_per_group,
+                             llapprox,
+                             maximal_mrfi,
+                             family){
+  if(is.character(init_theta)){
+    if(init_theta == "zero"){
+      current_theta <- rnorm(length(T_zobs), mean = 0, sd = sdkernel)*rep(included, each = dim_per_group)
+    } else if(init_theta == "pl") {
+      if(!is.null(llapprox@internal_data$mple)){
+        current_theta <- llapprox@internal_data$mple
+      } else {
+        current_theta <- mrf2d::fit_pl(z, maximal_mrfi, family)$theta
+        current_theta <- mrf2d::smr_array(current_theta, family)
+      }
+    }
+  } else if(is.array(init_theta)){
+    current_theta <- init_theta
+    current_theta <- mrf2d::smr_array(current_theta, family)
+  } else {
+    current_theta <- init_theta
+  }
+}
+
+
+mrfrj_step_within <- function(current_theta, current_lafn, z_arg, fdim, sdkernel, sdprior, llapprox){
+  proposed_theta <- current_theta + rnorm(fdim, mean = 0, sd = sdkernel)*(current_theta!=0)
+  proposed_lafn <- llapprox@lafn(z_arg, proposed_theta)
+
+  logA <- proposed_lafn +
+    sum(dnorm(proposed_theta[proposed_theta!=0], sd = sdprior, log = TRUE)) -
+    current_lafn -
+    sum(dnorm(current_theta[current_theta!=0], sd = sdprior, log = TRUE))
+
+  if(log(runif(1)) < logA){
+    next_theta <- proposed_theta
+    next_lafn <- proposed_lafn
+  } else {
+    next_theta <- current_theta
+    next_lafn <- current_lafn
+  }
+  return(list(theta = next_theta, lafn = next_lafn, logA = logA))
 }
