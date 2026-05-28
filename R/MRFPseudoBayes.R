@@ -54,6 +54,19 @@ MRFPseudoBayes <- R6::R6Class(
 
     log_target = function(theta_vec) {
       private$log_pl(theta_vec) + private$log_prior(theta_vec)
+    },
+
+    # Single Metropolis-Hastings step on theta.
+    # Returns a list(theta, log_target) with the (possibly updated) state.
+    mh_step = function(theta, log_target_val) {
+      proposed       <- theta + rnorm(private$.fdim, mean = 0,
+                                      sd = private$.sdkernel)
+      log_target_new <- private$log_target(proposed)
+      if (log(runif(1)) < log_target_new - log_target_val) {
+        list(theta = proposed, log_target = log_target_new)
+      } else {
+        list(theta = theta, log_target = log_target_val)
+      }
     }
   ),
 
@@ -179,14 +192,9 @@ MRFPseudoBayes <- R6::R6Class(
       log_target <- private$log_target(theta)
 
       for (i in seq_len(nsamples)) {
-        proposed       <- theta + rnorm(private$.fdim, mean = 0,
-                                        sd = private$.sdkernel)
-        log_target_new <- private$log_target(proposed)
-
-        if (log(runif(1)) < log_target_new - log_target) {
-          theta      <- proposed
-          log_target <- log_target_new
-        }
+        result     <- private$mh_step(theta, log_target)
+        theta      <- result$theta
+        log_target <- result$log_target
 
         new_chain[i, ] <- theta
 
