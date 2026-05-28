@@ -241,7 +241,7 @@ MRFRJPseudoBayes <- R6::R6Class(
 
         logA <- (proposed_lpl - lpl) +
           sum(dnorm(proposed[proposed != 0], sd = private$.sdprior, log = TRUE)) -
-          sum(dnorm(theta[proposed != 0],    sd = private$.sdprior, log = TRUE)) -
+          sum(dnorm(theta[theta != 0],       sd = private$.sdprior, log = TRUE)) -
           sum(dnorm(proposed[jump_idx],      sd = private$.sdbirth, log = TRUE)) -
           private$.logpenalty
 
