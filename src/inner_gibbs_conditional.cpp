@@ -23,10 +23,6 @@ IntegerMatrix inner_gibbs_conditional(IntegerMatrix zinit, arma::fcube &cond_wei
 
     IntegerMatrix zout = Rcpp::clone(zinit);
 
-    // Single RNG state sync for the entire function instead of
-    // one pair per Rcpp::sample() call
-    GetRNGstate();
-
     for(int t = 0; t < ncycles; t++){
 
         // Fisher-Yates shuffle via unif_rand()
@@ -75,8 +71,5 @@ IntegerMatrix inner_gibbs_conditional(IntegerMatrix zinit, arma::fcube &cond_wei
         }
     }
 
-    PutRNGstate();
-
     return zout;
 }
-
