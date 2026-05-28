@@ -277,6 +277,13 @@ HMRFPseudoBayes <- R6::R6Class(
       theta         <- private$.theta
       log_target_val <- private$log_target(theta)
 
+      if (verbose)
+        pb <- cli::cli_progress_bar(
+          total       = nsamples,
+          format      = "{cli::pb_bar} {cli::pb_current}/{cli::pb_total} | {cli::pb_rate} | ETA: {cli::pb_eta}",
+          .auto_close = FALSE
+        )
+
       for (i in seq_len(nsamples)) {
         # 1. Update emission parameters (mu, sigma2)
         private$step_pars()
@@ -296,9 +303,9 @@ HMRFPseudoBayes <- R6::R6Class(
         new_sigma2_chain[i, ] <- private$.sigma2
         new_theta_chain[i, ]  <- theta
 
-        if (verbose) cat("\r", nrow(private$.chain) + i)
+        if (verbose) cli::cli_progress_update(id = pb)
       }
-      if (verbose) cat("\n")
+      if (verbose) cli::cli_progress_done(id = pb)
 
       private$.theta        <- theta
       private$.chain        <- rbind(private$.chain, new_theta_chain)

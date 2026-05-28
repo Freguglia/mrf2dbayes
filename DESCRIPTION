@@ -16,6 +16,7 @@ LazyData: true
 Imports: 
     mrf2d,
     R6,
+    cli,
     Rcpp,
     dplyr (>= 0.8.1),
     tidyr,

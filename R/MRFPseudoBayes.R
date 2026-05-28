@@ -26,6 +26,7 @@
 #' @importFrom dplyr group_by summarize
 #' @importFrom stats dnorm rnorm runif quantile sd
 #' @importFrom glue glue
+#' @importFrom cli cli_progress_bar cli_progress_update cli_progress_done
 #'
 #' @export
 MRFPseudoBayes <- R6::R6Class(
@@ -191,6 +192,13 @@ MRFPseudoBayes <- R6::R6Class(
       theta      <- private$.theta
       log_target <- private$log_target(theta)
 
+      if (verbose)
+        pb <- cli::cli_progress_bar(
+          total       = nsamples,
+          format      = "{cli::pb_bar} {cli::pb_current}/{cli::pb_total} | {cli::pb_rate} | ETA: {cli::pb_eta}",
+          .auto_close = FALSE
+        )
+
       for (i in seq_len(nsamples)) {
         result     <- private$mh_step(theta, log_target)
         theta      <- result$theta
@@ -198,9 +206,9 @@ MRFPseudoBayes <- R6::R6Class(
 
         new_chain[i, ] <- theta
 
-        if (verbose) cat("\r", nrow(private$.chain) + i)
+        if (verbose) cli::cli_progress_update(id = pb)
       }
-      if (verbose) cat("\n")
+      if (verbose) cli::cli_progress_done(id = pb)
 
       private$.theta <- theta
       private$.chain <- rbind(private$.chain, new_chain)
