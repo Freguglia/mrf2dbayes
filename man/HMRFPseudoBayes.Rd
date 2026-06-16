@@ -54,6 +54,10 @@ containing all collected samples of emission parameters (\code{mu} and
 \code{c(nrow(y), ncol(y), C+1)}. The \verb{[i, j, k+1]} entry is the empirical
 posterior probability that \code{z[i,j] == k}. Returns \code{NULL} before
 \verb{$run()}.}
+
+\item{\code{zmap}}{MAP classification matrix with the same dimensions as \code{y}. Each entry
+contains the label \code{k} in \verb{0, ..., C} with the highest empirical
+posterior probability. Returns \code{NULL} before \verb{$run()}.}
 }
 \if{html}{\out{</div>}}
 }

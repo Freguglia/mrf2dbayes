@@ -169,6 +169,16 @@ HMRFPseudoBayes <- R6::R6Class(
       n <- nrow(private$.chain)
       if (n == 0L) return(NULL)
       private$.z_counts / n
+    },
+
+    #' @field zmap
+    #' MAP classification matrix with the same dimensions as `y`. Each entry
+    #' contains the label `k` in `0, ..., C` with the highest empirical
+    #' posterior probability. Returns `NULL` before `$run()`.
+    zmap = function() {
+      zp <- self$zprobs
+      if (is.null(zp)) return(NULL)
+      apply(zp, c(1L, 2L), which.max) - 1L
     }
   ),
 
