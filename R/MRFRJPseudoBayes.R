@@ -577,7 +577,7 @@ MRFRJPseudoBayes <- R6::R6Class(
       ggplot2::ggplot() +
         ggplot2::geom_tile(
           data    = tile_df,
-          mapping = ggplot2::aes(x = .data$ry, y = .data$rx,
+          mapping = ggplot2::aes(x = .data$rx, y = .data$ry,
                                  fill = .data$prob),
           color   = "grey50", width = 0.9, height = 0.9
         ) +
