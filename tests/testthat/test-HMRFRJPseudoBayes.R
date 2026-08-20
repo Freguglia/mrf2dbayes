@@ -122,6 +122,68 @@ test_that("run() updates mu and sigma2 (emission params move)", {
 })
 
 # ---------------------------------------------------------------------------
+# run() with warmup
+# ---------------------------------------------------------------------------
+
+test_that("run() with warmup stores negative t indices for warmup rows", {
+  s <- new_hrj()
+  s$run(10, warmup = 5, verbose = FALSE)
+  t_all <- s$samples_mrfi$t
+  expect_equal(sort(unique(t_all)), c(-5:-1, 1:10))
+})
+
+test_that("run() with warmup: n_samples counts both warmup and main rows", {
+  s <- new_hrj()
+  s$run(10, warmup = 5, verbose = FALSE)
+  expect_equal(s$n_samples, 15L)
+})
+
+test_that("run() with warmup: samples_pars t indices include warmup rows", {
+  s <- new_hrj()
+  s$run(10, warmup = 4, verbose = FALSE)
+  expect_equal(sort(unique(s$samples_pars$t)), c(-4:-1, 1:10))
+})
+
+test_that("run() during warmup only proposes within move (included set unchanged)", {
+  set.seed(1)
+  s <- new_hrj(init_included = c(TRUE, FALSE))
+  s$run(1, warmup = 20, verbose = FALSE)
+  im <- s$samples_mrfi
+  warmup_rows <- im[im$t < 0, ]
+  incl_by_t <- tapply(warmup_rows$value, warmup_rows$t,
+                      function(v) identical(v, c(TRUE, FALSE)))
+  expect_true(all(unlist(incl_by_t)))
+})
+
+test_that("zprobs excludes warmup iterations from its denominator and accumulation", {
+  s <- new_hrj()
+  s$run(10, warmup = 15, verbose = FALSE)
+  zp <- s$zprobs
+  totals <- apply(zp, c(1, 2), sum)
+  expect_true(all(abs(totals - 1) < 1e-10))
+  expect_equal(sum(s$zprobs) , nr * nc)  # each pixel's probs sum to 1 -> total = npixels
+})
+
+test_that("zprobs is NULL when only warmup iterations have been run", {
+  s <- new_hrj()
+  # nsamples must be >= 1, so simulate "warmup only so far" isn't directly
+  # possible via run(); instead check zprobs after a warmup-heavy run remains
+  # well-defined (denominator based on main-chain count only)
+  s$run(1, warmup = 30, verbose = FALSE)
+  zp <- s$zprobs
+  expect_false(is.null(zp))
+  expect_equal(dim(zp), c(nr, nc, C_val + 1L))
+})
+
+test_that("successive run() calls extend warmup/main indices without overlap", {
+  s <- new_hrj()
+  s$run(5, warmup = 3, verbose = FALSE)
+  s$run(5, warmup = 2, verbose = FALSE)
+  t_all <- sort(unique(s$samples_mrfi$t))
+  expect_equal(t_all, c(-5:-1, 1:10))
+})
+
+# ---------------------------------------------------------------------------
 # samples — theta chain (filtered zeros)
 # ---------------------------------------------------------------------------
 

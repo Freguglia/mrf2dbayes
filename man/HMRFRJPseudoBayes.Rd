@@ -181,14 +181,25 @@ Each iteration performs: (1) conjugate update of emission parameters,
 (2) Gibbs sweep of the latent field, (3) one Reversible-Jump MH step
 on \verb{(theta, M)} using the newly sampled field. Samples are appended
 to any previously collected samples.
+
+If \code{warmup > 0}, the sampler first runs \code{warmup} iterations in which
+only the \code{within} move is proposed for \verb{(theta, M)} (emission
+parameters and the latent field are still updated normally), letting
+the active \code{theta} entries settle before the interaction structure is
+allowed to change. These warmup iterations are stored with negative
+iteration indices and are excluded from inclusion probabilities and
+trace segmentation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HMRFRJPseudoBayes$run(nsamples, verbose = interactive())}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{HMRFRJPseudoBayes$run(nsamples, warmup = 0, verbose = interactive())}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{nsamples}}{Number of iterations to run.}
+\item{\code{nsamples}}{Number of (post-warmup) iterations to run.}
+
+\item{\code{warmup}}{Number of \code{within}-only warmup iterations to run before
+\code{nsamples} regular iterations. Defaults to \code{0}.}
 
 \item{\code{verbose}}{If \code{TRUE}, prints iteration progress.}
 }

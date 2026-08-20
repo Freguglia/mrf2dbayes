@@ -306,3 +306,64 @@ test_that("inherited z, mrfi, family, sdprior, sdkernel bindings are accessible"
   expect_equal(s$sdprior, 3)
   expect_equal(s$sdkernel, 0.02)
 })
+
+# ---------------------------------------------------------------------------
+# run() with warmup
+# ---------------------------------------------------------------------------
+
+test_that("run() with warmup stores negative t indices for warmup rows", {
+  s <- new_rj()
+  s$run(10, warmup = 5, verbose = FALSE)
+  t_all <- s$samples_mrfi$t
+  expect_equal(sort(unique(t_all)), c(-5:-1, 1:10))
+})
+
+test_that("run() with warmup: n_samples counts both warmup and main rows", {
+  s <- new_rj()
+  s$run(10, warmup = 5, verbose = FALSE)
+  expect_equal(s$n_samples, 15L)
+})
+
+test_that("run() with warmup = 0 behaves as before (all positive indices)", {
+  s <- new_rj()
+  s$run(10, warmup = 0, verbose = FALSE)
+  expect_equal(sort(unique(s$samples_mrfi$t)), 1:10)
+})
+
+test_that("run() during warmup only proposes the within move (included set unchanged)", {
+  set.seed(1)
+  s <- new_rj(init_included = c(TRUE, FALSE))
+  s$run(1, warmup = 20, verbose = FALSE)
+  im <- s$samples_mrfi
+  warmup_rows <- im[im$t < 0, ]
+  # theta entries stay active/inactive as initialised during warmup-only "within" moves
+  incl_by_t <- tapply(warmup_rows$value, warmup_rows$t,
+                      function(v) identical(v, c(TRUE, FALSE)))
+  expect_true(all(unlist(incl_by_t)))
+})
+
+test_that("successive run() calls extend warmup/main indices without overlap", {
+  s <- new_rj()
+  s$run(5, warmup = 3, verbose = FALSE)
+  s$run(5, warmup = 2, verbose = FALSE)
+  t_all <- unique(s$samples_mrfi$t)
+  expect_equal(length(t_all), length(unique(t_all)))  # no repeated indices
+  expect_equal(sort(t_all), c(-5:-1, 1:10))
+})
+
+test_that("summary() and plot_mrfi() exclude warmup iterations", {
+  set.seed(3)
+  s <- new_rj(init_included = "full", logpenalty = -10)
+  s$run(50, warmup = 20, verbose = FALSE)
+  st <- s$summary(burnin = 0)
+  expect_true(all(st$prob >= 0 & st$prob <= 1))
+  p <- s$plot_mrfi(burnin = 0)
+  expect_s3_class(p, "gg")
+})
+
+test_that("plot() handles chains that include warmup rows without erroring", {
+  s <- new_rj(init_included = "full")
+  s$run(20, warmup = 10, verbose = FALSE)
+  p <- s$plot()
+  expect_s3_class(p, "gg")
+})

@@ -142,17 +142,16 @@ HMRFRJPseudoBayes <- R6::R6Class(
     samples_pars = function() {
       if (nrow(private$.mu_chain) == 0L) return(NULL)
       C_val    <- private$.C
-      nsamples <- nrow(private$.mu_chain)
       k_labels <- as.character(0:C_val)
 
       dfmu          <- as.data.frame(private$.mu_chain)
       colnames(dfmu) <- k_labels
-      dfmu$t   <- seq_len(nsamples)
+      dfmu$t   <- private$.t_chain
       dfmu$par <- "mu"
 
       dfsig          <- as.data.frame(private$.sigma2_chain)
       colnames(dfsig) <- k_labels
-      dfsig$t   <- seq_len(nsamples)
+      dfsig$t   <- private$.t_chain
       dfsig$par <- "sigma2"
 
       df  <- rbind(dfmu, dfsig)
@@ -168,7 +167,7 @@ HMRFRJPseudoBayes <- R6::R6Class(
     #' posterior probability that `z[i,j] == k`. Returns `NULL` before
     #' the first `$run()` call.
     zprobs = function() {
-      n <- nrow(private$.chain)
+      n <- sum(private$.t_chain > 0L)
       if (n == 0L) return(NULL)
       private$.z_counts / n
     },
@@ -290,42 +289,58 @@ HMRFRJPseudoBayes <- R6::R6Class(
     #' on `(theta, M)` using the newly sampled field. Samples are appended
     #' to any previously collected samples.
     #'
-    #' @param nsamples Number of iterations to run.
+    #' If `warmup > 0`, the sampler first runs `warmup` iterations in which
+    #' only the `within` move is proposed for `(theta, M)` (emission
+    #' parameters and the latent field are still updated normally), letting
+    #' the active `theta` entries settle before the interaction structure is
+    #' allowed to change. These warmup iterations are stored with negative
+    #' iteration indices and are excluded from inclusion probabilities and
+    #' trace segmentation.
+    #'
+    #' @param nsamples Number of (post-warmup) iterations to run.
+    #' @param warmup Number of `within`-only warmup iterations to run before
+    #'   `nsamples` regular iterations. Defaults to `0`.
     #' @param verbose If `TRUE`, prints iteration progress.
     #'
     #' @return The sampler itself, invisibly (allows chaining).
-    run = function(nsamples, verbose = interactive()) {
+    run = function(nsamples, warmup = 0, verbose = interactive()) {
       stopifnot(is.numeric(nsamples), length(nsamples) == 1L, nsamples >= 1L)
+      stopifnot(is.numeric(warmup), length(warmup) == 1L, warmup >= 0L)
 
       C_val              <- private$.C
       move_list          <- c("within", "swap", "death", "birth", "jump")
-      new_theta_chain    <- matrix(0,     nrow = nsamples, ncol = private$.fdim)
-      new_included_chain <- matrix(FALSE, nrow = nsamples, ncol = private$.npos)
-      new_mu_chain       <- matrix(0,     nrow = nsamples, ncol = C_val + 1L)
-      new_sigma2_chain   <- matrix(0,     nrow = nsamples, ncol = C_val + 1L)
+      total              <- warmup + nsamples
+      new_theta_chain    <- matrix(0,     nrow = total, ncol = private$.fdim)
+      new_included_chain <- matrix(FALSE, nrow = total, ncol = private$.npos)
+      new_mu_chain       <- matrix(0,     nrow = total, ncol = C_val + 1L)
+      new_sigma2_chain   <- matrix(0,     nrow = total, ncol = C_val + 1L)
 
       theta <- private$.theta
       lpl   <- private$log_pl(theta)
 
       if (verbose)
         pb <- cli::cli_progress_bar(
-          total       = nsamples,
+          total       = total,
           format      = "{cli::pb_bar} {cli::pb_current}/{cli::pb_total} | {cli::pb_rate} | ETA: {cli::pb_eta}",
           .auto_close = FALSE
         )
 
-      for (i in seq_len(nsamples)) {
+      for (i in seq_len(total)) {
         # 1. Conjugate update of emission parameters
         private$step_pars()
 
-        # 2. Gibbs update of latent field; accumulate label counts
+        # 2. Gibbs update of latent field; accumulate label counts (warmup excluded)
         private$step_z()
-        private$.z_counts <- private$.z_counts +
-          indicator_array(private$.z, C_val)
+        if (i > warmup) {
+          private$.z_counts <- private$.z_counts +
+            indicator_array(private$.z, C_val)
+        }
 
-        # 3. RJ step on (theta, M) using the newly sampled z
+        # 3. RJ step on (theta, M) using the newly sampled z; only "within"
+        # is proposed during warmup
         lpl  <- private$log_pl(theta)  # re-evaluate with updated z
-        move <- sample(move_list, 1L, prob = private$.kernel_probs)
+        move <- if (i <= warmup) "within"
+                else sample(move_list, 1L, prob = private$.kernel_probs)
         res  <- switch(move,
           within = private$step_within(theta, lpl),
           birth  = private$step_birth (theta, lpl),
@@ -351,6 +366,8 @@ HMRFRJPseudoBayes <- R6::R6Class(
                                        new_included_chain)
       private$.mu_chain       <- rbind(private$.mu_chain,     new_mu_chain)
       private$.sigma2_chain   <- rbind(private$.sigma2_chain, new_sigma2_chain)
+      private$.t_chain        <- c(private$.t_chain,
+                                   private$next_t(warmup, nsamples))
 
       invisible(self)
     },

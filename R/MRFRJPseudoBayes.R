@@ -56,6 +56,21 @@ MRFRJPseudoBayes <- R6::R6Class(
     .sdbirth        = NULL,   # numeric: sd of birth proposal
     .kernel_probs   = NULL,   # numeric[5]: (within,swap,death,birth,jump) weights
     .included_chain = NULL,   # logical matrix: nsamples x npos
+    .t_chain        = NULL,   # integer vector: iteration index per row (negative = warmup)
+
+    # ------------------------------------------------------------------
+    # Next block of iteration indices: `warmup` steps get negative indices
+    # continuing from the most negative index used so far, and `nsamples`
+    # steps get positive indices continuing from the largest used so far.
+    # ------------------------------------------------------------------
+    next_t = function(warmup, nsamples) {
+      t_chain  <- private$.t_chain
+      min_t    <- if (length(t_chain) == 0L) 0L else min(0L, min(t_chain))
+      max_t    <- if (length(t_chain) == 0L) 0L else max(0L, max(t_chain))
+      warmup_t <- if (warmup   > 0L) seq(min_t - warmup, min_t - 1L) else integer(0)
+      main_t   <- if (nsamples > 0L) seq(max_t + 1L, max_t + nsamples) else integer(0)
+      c(warmup_t, main_t)
+    },
 
     # ------------------------------------------------------------------
     # Move: within — perturb active theta entries only
@@ -279,7 +294,7 @@ MRFRJPseudoBayes <- R6::R6Class(
     samples = function() {
       if (nrow(private$.chain) == 0L) return(NULL)
       resdf <- as.data.frame(private$.chain)
-      resdf$t <- seq_len(nrow(resdf))
+      resdf$t <- private$.t_chain
       resdf <- tidyr::pivot_longer(resdf, cols = -"t")
       desc  <- mrf2d::vec_description(private$.mrfi, private$.family,
                                       private$.C)
@@ -303,7 +318,7 @@ MRFRJPseudoBayes <- R6::R6Class(
       )
       df         <- as.data.frame(private$.included_chain)
       colnames(df) <- pos_labels
-      df$t       <- seq_len(nsamples)
+      df$t       <- private$.t_chain
       df         <- tidyr::pivot_longer(df,
                                         cols     = tidyr::all_of(pos_labels),
                                         names_to = "position")
@@ -400,6 +415,7 @@ MRFRJPseudoBayes <- R6::R6Class(
       private$.sdbirth        <- sdbirth
       private$.kernel_probs   <- kernel_probs
       private$.included_chain <- matrix(logical(0), nrow = 0L, ncol = npos)
+      private$.t_chain        <- integer(0)
     },
 
     #' @description
@@ -410,30 +426,42 @@ MRFRJPseudoBayes <- R6::R6Class(
     #' Metropolis-Hastings criterion. Samples are appended to previously
     #' collected samples so this method can be called repeatedly.
     #'
-    #' @param nsamples Number of iterations to run.
+    #' If `warmup > 0`, the sampler first runs `warmup` iterations in which
+    #' only the `within` move is proposed (i.e. `kernel_probs = c(1,0,0,0,0)`),
+    #' letting the active `theta` entries settle before the interaction
+    #' structure is allowed to change. These warmup iterations are stored
+    #' with negative iteration indices and are excluded from inclusion
+    #' probabilities and trace segmentation.
+    #'
+    #' @param nsamples Number of (post-warmup) iterations to run.
+    #' @param warmup Number of `within`-only warmup iterations to run before
+    #'   `nsamples` regular iterations. Defaults to `0`.
     #' @param verbose If `TRUE`, prints iteration progress.
     #'
     #' @return The sampler itself, invisibly (allows chaining).
-    run = function(nsamples, verbose = interactive()) {
+    run = function(nsamples, warmup = 0, verbose = interactive()) {
       stopifnot(is.numeric(nsamples), length(nsamples) == 1L, nsamples >= 1L)
+      stopifnot(is.numeric(warmup), length(warmup) == 1L, warmup >= 0L)
 
-      new_theta_chain    <- matrix(0,       nrow = nsamples, ncol = private$.fdim)
-      new_included_chain <- matrix(FALSE,   nrow = nsamples, ncol = private$.npos)
+      total              <- warmup + nsamples
+      new_theta_chain    <- matrix(0,       nrow = total, ncol = private$.fdim)
+      new_included_chain <- matrix(FALSE,   nrow = total, ncol = private$.npos)
 
-      move_list <- c("within", "swap", "death", "birth", "jump")
+      move_list    <- c("within", "swap", "death", "birth", "jump")
 
       theta <- private$.theta
       lpl   <- private$log_pl(theta)
 
       if (verbose)
         pb <- cli::cli_progress_bar(
-          total       = nsamples,
+          total       = total,
           format      = "{cli::pb_bar} {cli::pb_current}/{cli::pb_total} | {cli::pb_rate} | ETA: {cli::pb_eta}",
           .auto_close = FALSE
         )
 
-      for (i in seq_len(nsamples)) {
-        move <- sample(move_list, 1L, prob = private$.kernel_probs)
+      for (i in seq_len(total)) {
+        move <- if (i <= warmup) "within"
+                else sample(move_list, 1L, prob = private$.kernel_probs)
 
         res <- switch(move,
           within = private$step_within(theta, lpl),
@@ -457,6 +485,8 @@ MRFRJPseudoBayes <- R6::R6Class(
       private$.chain          <- rbind(private$.chain, new_theta_chain)
       private$.included_chain <- rbind(private$.included_chain,
                                        new_included_chain)
+      private$.t_chain        <- c(private$.t_chain,
+                                   private$next_t(warmup, nsamples))
 
       invisible(self)
     },
@@ -480,14 +510,14 @@ MRFRJPseudoBayes <- R6::R6Class(
     summary = function(burnin = 0.25) {
       if (nrow(private$.chain) == 0L)
         stop("No samples available. Call $run() first.")
-      tmax   <- nrow(private$.chain)
+      tmax   <- sum(private$.t_chain > 0L)  # warmup iterations never count
       if (burnin < 1) burnin <- floor(burnin * tmax)
       n_post <- tmax - burnin
       stopifnot(n_post > 0)
 
       # --- Inclusion probability from the full chain (all positions) --------
       im        <- self$samples_mrfi
-      im        <- im[im$t > burnin, ]
+      im        <- im[im$t > 0L & im$t > burnin, ]
       incl_prob <- dplyr::summarize(
         dplyr::group_by(im, .data$position),
         prob = mean(.data$value),
@@ -496,7 +526,7 @@ MRFRJPseudoBayes <- R6::R6Class(
 
       # --- Conditional theta statistics (active entries only) ---------------
       smp <- self$samples
-      if (!is.null(smp)) smp <- smp[smp$t > burnin, ]
+      if (!is.null(smp)) smp <- smp[smp$t > 0L & smp$t > burnin, ]
       if (!is.null(smp) && nrow(smp) > 0L) {
         theta_stats <- dplyr::summarize(
           dplyr::group_by(smp, .data$position, .data$interaction),
@@ -545,12 +575,12 @@ MRFRJPseudoBayes <- R6::R6Class(
     plot_mrfi = function(burnin = 0.25) {
       if (nrow(private$.chain) == 0L)
         stop("No samples available. Call $run() first.")
-      tmax   <- nrow(private$.chain)
+      tmax   <- sum(private$.t_chain > 0L)  # warmup iterations never count
       if (burnin < 1) burnin <- floor(burnin * tmax)
 
       # Inclusion probabilities per position
       im        <- self$samples_mrfi
-      im        <- im[im$t > burnin, ]
+      im        <- im[im$t > 0L & im$t > burnin, ]
       incl_prob <- dplyr::summarize(
         dplyr::group_by(im, .data$position),
         prob = mean(.data$value),

@@ -147,14 +147,24 @@ At each iteration one move type is sampled according to \code{kernel_probs}
 and the corresponding proposal is accepted or rejected via the
 Metropolis-Hastings criterion. Samples are appended to previously
 collected samples so this method can be called repeatedly.
+
+If \code{warmup > 0}, the sampler first runs \code{warmup} iterations in which
+only the \code{within} move is proposed (i.e. \code{kernel_probs = c(1,0,0,0,0)}),
+letting the active \code{theta} entries settle before the interaction
+structure is allowed to change. These warmup iterations are stored
+with negative iteration indices and are excluded from inclusion
+probabilities and trace segmentation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRFRJPseudoBayes$run(nsamples, verbose = interactive())}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRFRJPseudoBayes$run(nsamples, warmup = 0, verbose = interactive())}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{nsamples}}{Number of iterations to run.}
+\item{\code{nsamples}}{Number of (post-warmup) iterations to run.}
+
+\item{\code{warmup}}{Number of \code{within}-only warmup iterations to run before
+\code{nsamples} regular iterations. Defaults to \code{0}.}
 
 \item{\code{verbose}}{If \code{TRUE}, prints iteration progress.}
 }
