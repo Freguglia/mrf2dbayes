@@ -142,6 +142,7 @@ Defaults to \code{0.05}.}
 for \verb{(within, swap, death, birth, jump)}. Defaults to \code{c(4,1,1,1,1)}.}
 
 \item{\code{init_included}}{Initial active set: \code{"zero"} (default), \code{"full"},
+\code{"nearest"}
 or a logical vector of length equal to the number of positions in
 \code{mrfi}.}
 

@@ -123,8 +123,8 @@ for the moves \verb{(within, swap, death, birth, jump)}. Defaults to
 \code{c(4, 1, 1, 1, 1)}.}
 
 \item{\code{init_included}}{Initial active set. Either \code{"zero"} (no positions
-active, default), \code{"full"} (all positions active), or a logical vector
-of length equal to the number of positions in \code{mrfi}.}
+active, default), \code{"full"} (all positions active), \code{"nearest"} (nearest neighbors)
+or a logical vector of length equal to the number of positions in \code{mrfi}.}
 
 \item{\code{init_theta}}{Initial \code{theta} vector. Either:
 \itemize{

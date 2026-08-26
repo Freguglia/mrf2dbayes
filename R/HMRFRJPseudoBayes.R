@@ -204,6 +204,7 @@ HMRFRJPseudoBayes <- R6::R6Class(
     #' @param kernel_probs Numeric vector of length 5 with unnormalised weights
     #'   for `(within, swap, death, birth, jump)`. Defaults to `c(4,1,1,1,1)`.
     #' @param init_included Initial active set: `"zero"` (default), `"full"`,
+    #'   `"nearest"`
     #'   or a logical vector of length equal to the number of positions in
     #'   `mrfi`.
     #' @param init_theta Initial `theta`: `"zero"` (default), `"pl"`, or a

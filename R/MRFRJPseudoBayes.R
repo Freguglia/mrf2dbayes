@@ -348,8 +348,8 @@ MRFRJPseudoBayes <- R6::R6Class(
     #'   for the moves `(within, swap, death, birth, jump)`. Defaults to
     #'   `c(4, 1, 1, 1, 1)`.
     #' @param init_included Initial active set. Either `"zero"` (no positions
-    #'   active, default), `"full"` (all positions active), or a logical vector
-    #'   of length equal to the number of positions in `mrfi`.
+    #'   active, default), `"full"` (all positions active), `"nearest"` (nearest neighbors)
+    #'   or a logical vector of length equal to the number of positions in `mrfi`.
     #' @param init_theta Initial `theta` vector. Either:
     #'   * `"zero"` — active positions initialised with `N(0, sdkernel^2)`;
     #'   * `"pl"` — initialised at the maximum pseudolikelihood estimate
@@ -380,6 +380,8 @@ MRFRJPseudoBayes <- R6::R6Class(
           included <- rep(FALSE, npos)
         } else if (init_included == "full") {
           included <- rep(TRUE, npos)
+        } else if(init_included == "nearest"){
+          included <- sapply(as.list(mrfi), function(x) all(c(0,1) %in% x))
         } else {
           stop("'init_included' must be \"zero\", \"full\", or a logical vector.")
         }
